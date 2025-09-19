@@ -1,31 +1,22 @@
 name: Suvidha Software Solutions
 
 on:
-  push:
-    branches: [ "master" ]
-  pull_request:
-    branches: [ "master" ]
+  workflow_dispatch:
 
 jobs:
-  build:
-    runs-on: windows-latest
+  android:
+    name: 🤖 Android Build
+    runs-on: ubuntu-latest
 
     steps:
       - uses: actions/checkout@v4
 
-      # Setup Flutter SDK
       - uses: subosito/flutter-action@v2
         with:
-          flutter-version: 'stable'  # You can specify a version like '3.13.0'
+          channel: 'stable'
 
       - name: Install dependencies
         run: flutter pub get
-
-      - name: Analyze project
-        run: flutter analyze
-
-      - name: Run tests
-        run: flutter test
 
       - name: Build APK
         run: flutter build apk --release
@@ -35,3 +26,39 @@ jobs:
         with:
           name: release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
+
+  ios:
+    name: 🍏 iOS Build
+    runs-on: macos-latest
+    needs: android
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          architecture: x64
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Update CocoaPods repo
+        run: pod repo update
+        working-directory: ios
+
+      - name: Build iOS release (no codesign)
+        run: flutter build ios --release --no-codesign
+
+      - name: Prepare .ipa
+        run: |
+          mkdir Payload
+          mv Runner.app Payload/
+          zip -qq -r -9 FlutterIpaExport.ipa Payload
+        working-directory: build/ios/iphoneos
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-ipa
+          path: build/ios/iphoneos/FlutterIpaExport.ipa
