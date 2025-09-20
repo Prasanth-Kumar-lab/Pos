@@ -36,7 +36,7 @@ class LoginController extends GetxController {
           isLoading.value = false;
           Get.snackbar('Success', data['message'],
               snackPosition: SnackPosition.BOTTOM);
-          Get.to(() => HomeScreen());
+          Get.offAll(() => HomeScreen());
         } else {
           isLoading.value = false;
           Get.snackbar('Error', data['message'] ?? 'Login failed',

@@ -1,14 +1,22 @@
-import 'package:flutter/material.dart';
 class Product {
-  String name;
-  double price;
+  String? itemName;
+  double? sellingPrice;
+  String? itemImage; // New field for image URL
   int quantity;
-  IconData? icon; // New field for product-specific icon
 
   Product({
-    required this.name,
-    required this.price,
+    this.itemName,
+    this.sellingPrice,
+    this.itemImage,
     this.quantity = 0,
-    this.icon,
   });
+
+  factory Product.fromJson(Map<String, dynamic> json) {
+    return Product(
+      itemName: json['item_name']?.toString(),
+      sellingPrice: double.tryParse(json['selling_price']?.toString() ?? ''),
+      itemImage: json['item_image']?.toString(), // Parse item_image
+      quantity: 0,
+    );
+  }
 }
