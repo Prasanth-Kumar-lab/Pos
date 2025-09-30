@@ -1,6 +1,7 @@
 import 'dart:convert';
 
 class AddProductsAPI {
+  final String productId; // Added for product_id
   final String productCode;
   final String productCat;
   final String itemName;
@@ -13,6 +14,7 @@ class AddProductsAPI {
   final String availabilityStatus;
 
   AddProductsAPI({
+    required this.productId,
     required this.productCode,
     required this.productCat,
     required this.itemName,
@@ -27,11 +29,12 @@ class AddProductsAPI {
 
   factory AddProductsAPI.fromJson(Map<String, dynamic> json) {
     return AddProductsAPI(
+      productId: json['product_id'] as String? ?? '', // Map product_id
       productCode: json['product_code'] as String? ?? '',
       productCat: json['product_cat'] as String? ?? '',
       itemName: json['item_name'] as String? ?? '',
       sellingPrice: json['selling_price'] as String? ?? '',
-      units: json['units'] as String? ?? '',
+      units: json['selling_unit'] as String? ?? '',
       cgst: json['cgst'] as String? ?? '',
       sgst: json['sgst'] as String? ?? '',
       igst: json['igst'] as String? ?? '',
@@ -42,6 +45,7 @@ class AddProductsAPI {
 
   Map<String, String> toMap() {
     return {
+      'product_id': productId, // Include product_id
       'product_code': productCode,
       'product_cat': productCat,
       'item_name': itemName,

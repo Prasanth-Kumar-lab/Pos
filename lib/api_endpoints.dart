@@ -31,4 +31,20 @@ class ApiConstants {
 
   static const String listTax = 'https://erpapp.in/mart_print/mart_print_apis/list_taxes_api.php';
 
+//-------------------------------Biller/AdminProfile--------------------------------
+  static const String profileEndPoint = 'https://erpapp.in/mart_print/mart_print_apis/profile_api.php';
+
+  //-----------------------------UpdateProfile -------------------------------------
+
+static const String updateProfiileEndPoint = 'https://erpapp.in/mart_print/mart_print_apis/profile_update_api.php';
+
+//-------------------------------ordersEndPoint--------------------------------------
+
+static const String ordersEndPoint = 'https://erpapp.in/mart_print/mart_print_apis/add_order_api.php';
+
+  static const String cartCountEndPoint = 'https://erpapp.in/mart_print/mart_print_apis/cart_count_api.php';
+
+  static const String getCartItemsEndPoint = 'https://erpapp.in/mart_print/mart_print_apis/get_cart_items_api.php';
+  static const String editProductsEndPoint = 'https://erpapp.in/mart_print/mart_print_apis/edit_products_api.php';
+
 }

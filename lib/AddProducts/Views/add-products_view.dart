@@ -50,6 +50,7 @@ class _AddProductsPageState extends State<AddProductsPage>
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
       final params = {
+
         'product_code': _productCodeController.text,
         'product_cat': _selectedCategory ?? '',
         'item_name': _itemNameController.text,
@@ -194,11 +195,14 @@ class _AddProductsPageState extends State<AddProductsPage>
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
+
+            const SizedBox(height: 16),
             buildCircularBorderTextField(
               controller: _productCodeController,
               label: 'Product Code',
               icon: Icons.qr_code,
               validator: (value) => value!.isEmpty ? 'Required' : null,
+
             ),
             const SizedBox(height: 16),
             Obx(() => DropdownButtonFormField2<String>(
@@ -363,13 +367,13 @@ class _AddProductsPageState extends State<AddProductsPage>
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => EditProductPage(product: product, ),
+                  builder: (_) => EditProductPage(product: product),
                 ),
               );
             },
             trailing: IconButton(
               icon: const Icon(Icons.delete),
-              onPressed: () => controller.deleteProduct(product.productCode),
+              onPressed: () => controller.deleteProduct(product.productId), // Use productId
             ),
           );
         },

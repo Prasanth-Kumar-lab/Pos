@@ -36,9 +36,10 @@ class MyApp extends StatelessWidget {
           page: () => HomeScreen(
             name: Get.arguments['name'] ?? 'User',
             username: Get.arguments['username'] ?? '',
-            mobileNumber: Get.arguments['mobileNumber'] ?? 'N/A',
+            mobileNumber: Get.arguments['number'] ?? 'N/A',
             businessId: Get.arguments['business_id']??'N/A',
             role: Get.arguments['role'] ?? 'N/A',
+            user_id: Get.arguments['id'] ?? 'N/A',
           ),
         ),
         GetPage(
@@ -46,8 +47,10 @@ class MyApp extends StatelessWidget {
           page: () => ProfileButtons(
             name: Get.arguments['name'] ?? 'User',
             username: Get.arguments['username'] ?? '',
-            mobileNumber: Get.arguments['mobileNumber'] ?? 'N/A',
+            mobileNumber: Get.arguments['number'] ?? 'N/A',
             businessId: Get.arguments['business_id']?? 'N/A',
+            user_id: Get.arguments['id']?? 'N/A',
+            role: Get.arguments['role'] ?? 'N/A',
           ),
         ),
       ],

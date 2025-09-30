@@ -43,7 +43,7 @@ class AddProductsController extends GetxController {
         Get.snackbar('Error', 'Failed to fetch categories');
       }
     } catch (e) {
-      print('Error fetching categories: $e');
+      print('Error fetching categories: Please ask admin to add');
       Get.snackbar('Error', 'Error fetching categories: $e');
     }
   }
@@ -64,7 +64,7 @@ class AddProductsController extends GetxController {
         if (jsonData is List) {
           jsonList = jsonData;
         } else if (jsonData is Map) {
-          jsonList = jsonData['data'] ?? []; // Adjust 'data' key if needed
+          jsonList = jsonData['data'] ?? [];
         } else {
           throw Exception('Unexpected response format');
         }
@@ -76,7 +76,7 @@ class AddProductsController extends GetxController {
         Get.snackbar('Error', 'Failed to fetch taxes');
       }
     } catch (e) {
-      print('Error fetching taxes: $e');
+      print('Error fetching taxes: Please ask admin to add');
       Get.snackbar('Error', 'Error fetching taxes: $e');
     }
   }
@@ -163,10 +163,10 @@ class AddProductsController extends GetxController {
     }
   }
 
-  Future<void> deleteProduct(String productCode) async {
-    final request = http.MultipartRequest('POST', Uri.parse('${ApiConstants.productsEndPoint}'));
-    request.fields['product_code'] = productCode;
-    request.fields['business_id'] = businessId;
+  Future<void> deleteProduct(String productId) async {
+    final request = http.MultipartRequest('POST', Uri.parse('https://erpapp.in/mart_print/mart_print_apis/delete_products_api.php'));
+    request.fields['product_id'] = productId;
+    request.fields['business_id'] = businessId; // Dynamically pass businessId
 
     try {
       final streamedResponse = await request.send();

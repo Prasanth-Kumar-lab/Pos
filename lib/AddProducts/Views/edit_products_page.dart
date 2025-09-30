@@ -1,9 +1,8 @@
+import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:get/get_core/src/get_main.dart';
-
 import '../Controller/add_product_controller.dart';
 import '../model/add_product_model.dart';
-import 'package:flutter/material.dart';
+
 class EditProductPage extends StatefulWidget {
   final AddProductsAPI product;
 
@@ -15,6 +14,7 @@ class EditProductPage extends StatefulWidget {
 
 class _EditProductPageState extends State<EditProductPage> {
   final _formKey = GlobalKey<FormState>();
+  final _productIdController = TextEditingController(); // Added for product_id
   final _productCodeController = TextEditingController();
   final _productCatController = TextEditingController();
   final _itemNameController = TextEditingController();
@@ -29,6 +29,7 @@ class _EditProductPageState extends State<EditProductPage> {
   @override
   void initState() {
     super.initState();
+    _productIdController.text = widget.product.productId; // Set product_id
     _productCodeController.text = widget.product.productCode;
     _productCatController.text = widget.product.productCat;
     _itemNameController.text = widget.product.itemName;
@@ -43,6 +44,7 @@ class _EditProductPageState extends State<EditProductPage> {
   void _updateProduct() {
     if (_formKey.currentState!.validate()) {
       final params = {
+        'product_id': _productIdController.text, // Include product_id
         'product_code': _productCodeController.text,
         'product_cat': _productCatController.text,
         'item_name': _itemNameController.text,
@@ -60,6 +62,7 @@ class _EditProductPageState extends State<EditProductPage> {
 
   @override
   void dispose() {
+    _productIdController.dispose(); // Dispose new controller
     _productCodeController.dispose();
     _productCatController.dispose();
     _itemNameController.dispose();
@@ -76,9 +79,16 @@ class _EditProductPageState extends State<EditProductPage> {
     return Column(
       children: [
         TextFormField(
+          controller: _productIdController,
+          decoration: const InputDecoration(labelText: 'Product ID'),
+          validator: (value) => value!.isEmpty ? 'Required' : null,
+          readOnly: true, // Set readOnly to true
+        ),
+        TextFormField(
           controller: _productCodeController,
           decoration: const InputDecoration(labelText: 'Product Code'),
           validator: (value) => value!.isEmpty ? 'Required' : null,
+          readOnly: true, // Set readOnly to true
         ),
         TextFormField(
           controller: _productCatController,

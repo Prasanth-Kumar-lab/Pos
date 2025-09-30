@@ -1,4 +1,3 @@
-
 class AddBillerModel {
   final String name;
   final String mobileNumber;
@@ -7,6 +6,7 @@ class AddBillerModel {
   final String role;
   final String aadharNumber;
   final String address;
+  final String businessId;
 
   AddBillerModel({
     required this.name,
@@ -16,6 +16,7 @@ class AddBillerModel {
     required this.role,
     required this.aadharNumber,
     required this.address,
+    required this.businessId,
   });
 
   Map<String, dynamic> toJson() => {
@@ -26,5 +27,6 @@ class AddBillerModel {
     'role': role,
     'aadhar_number': aadharNumber,
     'address': address,
+    'business_id': businessId,
   };
 }

@@ -6,7 +6,8 @@ import 'package:task/AddCategory/views/add_category_views.dart';
 import 'package:task/AddProducts/Views/add-products_view.dart';
 import 'package:task/Add_Tax/Views/add_tax_view.dart';
 import 'package:task/login/views/login_screen.dart';
-import 'package:task/profile/views/profile_page.dart';
+import '../../AddSystemSettings/view/system_settings_view.dart';
+import 'biller_profile.dart';
 import '../widgets/profile_action_button.dart';
 
 class ProfileButtons extends StatelessWidget {
@@ -14,6 +15,8 @@ class ProfileButtons extends StatelessWidget {
   final String username;
   final String mobileNumber;
   final String businessId;
+  final String user_id;
+  final String role;
 
   const ProfileButtons({
     super.key,
@@ -21,6 +24,8 @@ class ProfileButtons extends StatelessWidget {
     required this.username,
     required this.mobileNumber,
     required this.businessId,
+    required this.user_id,
+    required this.role,
   });
 
   @override
@@ -37,7 +42,7 @@ class ProfileButtons extends StatelessWidget {
           ),
         ),
         leading: Padding(
-          padding: EdgeInsets.all(8.0),
+          padding: const EdgeInsets.all(8.0),
           child: GestureDetector(
             onTap: () {
               Navigator.of(context).pop();
@@ -83,7 +88,7 @@ class ProfileButtons extends StatelessWidget {
                         CircleAvatar(
                           radius: 60,
                           backgroundColor: Colors.grey.shade300,
-                          backgroundImage: AssetImage('assets/profile_placeholder.png'),
+                          backgroundImage: const AssetImage('assets/profile_placeholder.png'),
                           child: const Icon(
                             Icons.person,
                             size: 60,
@@ -95,13 +100,13 @@ class ProfileButtons extends StatelessWidget {
                             // Handle avatar edit action
                           },
                           child: Container(
-                            padding: EdgeInsets.all(6),
+                            padding: const EdgeInsets.all(6),
                             decoration: BoxDecoration(
                               color: Colors.orange.shade400,
                               shape: BoxShape.circle,
                               border: Border.all(color: Colors.white, width: 2),
                             ),
-                            child: Icon(
+                            child: const Icon(
                               Icons.edit,
                               size: 18,
                               color: Colors.white,
@@ -110,29 +115,23 @@ class ProfileButtons extends StatelessWidget {
                         ),
                       ],
                     ),
-                    SizedBox(height: 16),
+                    const SizedBox(height: 16),
                     Text(
-                      'Business ID: $businessId', // Dynamic name from parameter
+                      'Business ID: $businessId',
                       style: theme.textTheme.headlineSmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Colors.black87,
                       ),
                     ),
-                    SizedBox(height: 8),
+                    const SizedBox(height: 8),
                     Text(
-                      name, // Dynamic username from parameter
+                      name,
                       style: theme.textTheme.bodyLarge?.copyWith(
                         color: Colors.grey.shade600,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
-                    SizedBox(height: 8),
-                    /*Text(
-                      '$username', // Dynamic mobile number from parameter
-                      style: theme.textTheme.bodyLarge?.copyWith(
-                        color: Colors.grey.shade600,
-                      ),
-                    ),*/
+                    const SizedBox(height: 8),
                   ],
                 ),
               ),
@@ -142,10 +141,10 @@ class ProfileButtons extends StatelessWidget {
                 title: 'Edit Profile',
                 onTap: () {
                   Get.to(() => ProfilePage(
-                    name: name,
-                    username: username,
-                    mobileNumber: mobileNumber,
-                  )); // Pass params to ProfilePage if needed
+                    businessId: businessId,
+                    role: role,
+                    user_id: user_id,
+                  ));
                 },
               ),
               const Divider(height: 1, thickness: 1, color: Colors.grey),
@@ -153,7 +152,7 @@ class ProfileButtons extends StatelessWidget {
                 icon: Icons.location_on_outlined,
                 title: 'Add Products',
                 onTap: () {
-                  Get.to(()=>AddProductsPage(businessId: businessId,));// Handle address action
+                  Get.to(() => AddProductsPage(businessId: businessId));
                 },
               ),
               const Divider(height: 1, thickness: 1, color: Colors.grey),
@@ -161,7 +160,7 @@ class ProfileButtons extends StatelessWidget {
                 icon: Icons.favorite_border,
                 title: 'Add Category',
                 onTap: () {
-                  Get.to(()=>AddCategoryView(businessId: businessId,));// Handle favorites action
+                  Get.to(() => AddCategoryView(businessId: businessId));
                 },
               ),
               const Divider(height: 1, thickness: 1, color: Colors.grey),
@@ -169,7 +168,7 @@ class ProfileButtons extends StatelessWidget {
                 icon: Icons.work_history_outlined,
                 title: 'Add Tax',
                 onTap: () {
-                  Get.to(()=>AddTaxView(businessId:businessId));// Handle orders action
+                  Get.to(() => AddTaxView(businessId: businessId));
                 },
               ),
               const Divider(height: 1, thickness: 1, color: Colors.grey),
@@ -177,15 +176,15 @@ class ProfileButtons extends StatelessWidget {
                 icon: Icons.security,
                 title: 'Add Biller',
                 onTap: () {
-                  Get.to(()=>AddBillerScreen());// Handle privacy action
+                  Get.to(() => AddBillerScreen(businessId: businessId));
                 },
               ),
               const Divider(height: 1, thickness: 1, color: Colors.grey),
               ProfileActionButton(
                 icon: Icons.support_agent_outlined,
-                title: 'Chat & Support',
+                title: 'Add System Settings',
                 onTap: () {
-                  // Handle support action
+                  Get.to(() => AddSystemSettingsView(), arguments: {'businessId': businessId});
                 },
               ),
               const Divider(height: 1, thickness: 1, color: Colors.grey),
@@ -202,10 +201,10 @@ class ProfileButtons extends StatelessWidget {
                 title: 'Logout',
                 textColor: Colors.red.shade600,
                 onTap: () {
-                  Get.offAll(() => LoginScreen());
+                  Get.offAll(() => const LoginScreen());
                 },
               ),
-              Divider(height: 1, thickness: 1, color: Colors.grey),
+              const Divider(height: 1, thickness: 1, color: Colors.grey),
             ],
           ),
         ),

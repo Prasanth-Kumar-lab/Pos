@@ -14,6 +14,7 @@ class AddBillerController extends GetxController {
   final passwordController = TextEditingController();
   final aadharNumberController = TextEditingController();
   final addressController = TextEditingController();
+  final businessIdController = TextEditingController();
 
   var isLoading = false.obs;
   var obscurePassword = true.obs;
@@ -26,6 +27,7 @@ class AddBillerController extends GetxController {
     passwordController.dispose();
     aadharNumberController.dispose();
     addressController.dispose();
+    businessIdController.dispose();
     super.onClose();
   }
 
@@ -46,6 +48,7 @@ class AddBillerController extends GetxController {
         role: 'Biller',
         aadharNumber: aadharNumberController.text.trim(),
         address: addressController.text.trim(),
+        businessId: businessIdController.text.trim(),
       );
 
       try {

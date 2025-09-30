@@ -1,22 +1,45 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:get/get.dart';
-import 'package:task/signup_page/controller/signup_controller.dart';
+import 'package:task/AddBiller/controller/add_biller_controller.dart';
 import '../../../login/widgets/custom_text_field_and_button.dart';
 
-class AddBillerScreen extends StatelessWidget {
-  const AddBillerScreen({Key? key}) : super(key: key);
+class AddBillerScreen extends StatefulWidget {
+  final String businessId;
+
+  const AddBillerScreen({Key? key, required this.businessId}) : super(key: key);
+
+  @override
+  _AddBillerScreenState createState() => _AddBillerScreenState();
+}
+
+class _AddBillerScreenState extends State<AddBillerScreen> {
+  final AddBillerController controller = Get.put(AddBillerController());
+
+  @override
+  void initState() {
+    super.initState();
+    controller.businessIdController.text = widget.businessId; // Set initial businessId
+  }
+
+  @override
+  void dispose() {
+    // Controller disposal is handled in AddBillerController's onClose
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(SignupController());
-
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: SystemUiOverlayStyle.dark.copyWith(
         statusBarColor: Colors.white,
         statusBarIconBrightness: Brightness.dark,
       ),
       child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Add Biller'),
+        ),
         body: GestureDetector(
           onTap: () => FocusScope.of(context).unfocus(),
           child: SafeArea(
@@ -124,6 +147,22 @@ class AddBillerScreen extends StatelessWidget {
                       icon: Icons.location_on_outlined,
                       validator: (value) =>
                       value == null || value.isEmpty ? 'Please enter your address' : null,
+                    ),
+                    const SizedBox(height: 16),
+                    TextFormField(
+                      controller: controller.businessIdController,
+                      decoration: InputDecoration(
+                        labelText: 'Business ID',
+                        prefixIcon: Icon(Icons.business_outlined),
+                        border: OutlineInputBorder(),
+                      ),
+                      readOnly: true,
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Business ID is required';
+                        }
+                        return null;
+                      },
                     ),
                     const SizedBox(height: 24),
                     Obx(() => CustomButton(
