@@ -1,62 +1,24 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
-
+import 'package:get/get.dart';
 import '../controller/add_category_controller.dart';
 import '../model/add_category_model.dart';
-class AddCategoryView extends StatefulWidget {
-  const AddCategoryView({Key? key, required this.businessId}) : super(key: key);
+
+class AddCategoryView extends StatelessWidget {
   final String businessId;
 
-  @override
-  _AddCategoryViewState createState() => _AddCategoryViewState();
-}
-
-class _AddCategoryViewState extends State<AddCategoryView> {
-  final _formKey = GlobalKey<FormState>();
-  final _categoryNameController = TextEditingController();
-  final _businessIdController = TextEditingController();
-  final AddCategoryController _controller = AddCategoryController();
-  bool _isLoading = false;
-  @override
-  void initState() {
-    super.initState();
-    _businessIdController.text = widget.businessId; // Set initial businessId
-  }
-  void _submit() async {
-    if (_formKey.currentState!.validate()) {
-      setState(() {
-        _isLoading = true;
-      });
-
-      final category = CategoryModel(
-        categoryName: _categoryNameController.text,
-        businessId: _businessIdController.text,
-      );
-
-      var response = await _controller.addCategory(category);
-
-      setState(() {
-        _isLoading = false;
-      });
-
-      if (response['status'] == 'Success') {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response['message'])),
-        );
-        _categoryNameController.clear();
-        _businessIdController.clear();
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(response['message'] ?? 'Failed to add category')),
-        );
-      }
-    }
-  }
+  const AddCategoryView({super.key, required this.businessId});
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
+    // Initialize GetX controller
+    final AddCategoryController controller = Get.put(AddCategoryController());
 
+    // Initialize text controllers
+    final categoryNameController = TextEditingController();
+    final businessIdController = TextEditingController(text: businessId);
+
+    return Scaffold(
       appBar: AppBar(
         title: const Text('Add Category'),
       ),
@@ -65,11 +27,11 @@ class _AddCategoryViewState extends State<AddCategoryView> {
         child: Padding(
           padding: const EdgeInsets.all(16.0),
           child: Form(
-            key: _formKey,
+            key: controller.formKey,
             child: Column(
               children: [
                 TextFormField(
-                  controller: _categoryNameController,
+                  controller: categoryNameController,
                   decoration: InputDecoration(
                     labelText: 'Category name',
                     border: OutlineInputBorder(
@@ -83,10 +45,10 @@ class _AddCategoryViewState extends State<AddCategoryView> {
                       borderRadius: BorderRadius.circular(30),
                       borderSide: const BorderSide(color: Colors.orange, width: 2),
                     ),
-                    prefixIcon: Icon(CupertinoIcons.rectangle_grid_1x2),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                    prefixIcon: const Icon(CupertinoIcons.rectangle_grid_1x2),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 20),
                   ),
-
                   validator: (value) {
                     if (value == null || value.isEmpty) {
                       return 'Please enter a category name';
@@ -94,9 +56,9 @@ class _AddCategoryViewState extends State<AddCategoryView> {
                     return null;
                   },
                 ),
-                SizedBox(height: 10,),
+                const SizedBox(height: 10),
                 TextFormField(
-                  controller: _businessIdController,
+                  controller: businessIdController,
                   decoration: InputDecoration(
                     labelText: 'Business ID',
                     border: OutlineInputBorder(
@@ -110,8 +72,9 @@ class _AddCategoryViewState extends State<AddCategoryView> {
                       borderRadius: BorderRadius.circular(30),
                       borderSide: const BorderSide(color: Colors.orange, width: 2),
                     ),
-                    prefixIcon: Icon(Icons.business_center_outlined),
-                    contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
+                    prefixIcon: const Icon(Icons.business_center_outlined),
+                    contentPadding: const EdgeInsets.symmetric(
+                        vertical: 16, horizontal: 20),
                   ),
                   readOnly: true,
                   validator: (value) {
@@ -122,15 +85,45 @@ class _AddCategoryViewState extends State<AddCategoryView> {
                   },
                 ),
                 const SizedBox(height: 20),
-                _isLoading
-                    ? const CircularProgressIndicator()
-                    : ElevatedButton(
-                  onPressed: _submit,
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange.shade700,
-                    foregroundColor: Colors.black
+                Obx(
+                      () => controller.isLoading.value
+                      ? const CircularProgressIndicator()
+                      : ElevatedButton(
+                    onPressed: () async {
+                      if (controller.formKey.currentState!.validate()) {
+                        final category = CategoryModel(
+                          categoryName: categoryNameController.text,
+                          businessId: businessIdController.text,
+                        );
+                        await controller.addCategory(category);
+                        if (controller.responseStatus.value == 'Success') {
+                          Get.snackbar(
+                            'Success',
+                            controller.responseMessage.value,
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.green,
+                            colorText: Colors.white,
+                          );
+                          categoryNameController.clear();
+                        } else {
+                          Get.snackbar(
+                            'Error',
+                            controller.responseMessage.value.isNotEmpty
+                                ? controller.responseMessage.value
+                                : 'Failed to add category',
+                            snackPosition: SnackPosition.BOTTOM,
+                            backgroundColor: Colors.red,
+                            colorText: Colors.white,
+                          );
+                        }
+                      }
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange.shade700,
+                      foregroundColor: Colors.black,
+                    ),
+                    child: const Text('Add Category'),
                   ),
-                  child: Text('Add Category'),
                 ),
               ],
             ),
@@ -138,12 +131,5 @@ class _AddCategoryViewState extends State<AddCategoryView> {
         ),
       ),
     );
-  }
-
-  @override
-  void dispose() {
-    _categoryNameController.dispose();
-    _businessIdController.dispose();
-    super.dispose();
   }
 }

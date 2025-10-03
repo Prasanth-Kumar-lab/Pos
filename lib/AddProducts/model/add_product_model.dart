@@ -50,7 +50,7 @@ class AddProductsAPI {
       'product_cat': productCat,
       'item_name': itemName,
       'selling_price': sellingPrice,
-      'units': units,
+      'selling_unit': units,
       'cgst': cgst,
       'sgst': sgst,
       'igst': igst,

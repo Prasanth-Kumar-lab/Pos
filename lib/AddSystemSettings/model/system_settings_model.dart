@@ -1,6 +1,8 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
+import 'package:task/api_endpoints.dart';
+
 class SystemSettingsModel {
   final String billPrefix;
   final String quote;
@@ -42,7 +44,7 @@ class SystemSettingsModel {
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse('https://erpapp.in/mart_print/mart_print_apis/system_settings_api.php'),
+        Uri.parse(ApiConstants.systemSettingsEndPoint),
       );
 
       // Add form-data fields

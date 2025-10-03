@@ -52,19 +52,11 @@ class _AddBillerScreenState extends State<AddBillerScreen> {
                   children: [
                     const SizedBox(height: 40),
                     const Text(
-                      'Create Account',
+                      'Create Account For Biller',textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
                         color: Colors.black,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    const Text(
-                      'SignUp today',
-                      style: TextStyle(
-                        fontSize: 16,
-                        color: Colors.black54,
                       ),
                     ),
                     const SizedBox(height: 40),
@@ -166,7 +158,7 @@ class _AddBillerScreenState extends State<AddBillerScreen> {
                     ),
                     const SizedBox(height: 24),
                     Obx(() => CustomButton(
-                      text: 'Sign Up',
+                      text: 'Add Biller',
                       isLoading: controller.isLoading.value,
                       onPressed: controller.handleSignup,
                     )),

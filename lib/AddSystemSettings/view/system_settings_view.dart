@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 
 import '../controller/system_settings_controller.dart';
+import '../widgets/Circular_fields.dart';
 
 class AddSystemSettingsView extends StatelessWidget {
   const AddSystemSettingsView({super.key});
@@ -44,7 +45,7 @@ class AddSystemSettingsView extends StatelessWidget {
                 const SizedBox(height: 20),
 
                 /// Business ID (ReadOnly)
-                _CircularInputField(
+                CircularInputField(
                   controller: controller.businessIdController,
                   labelText: 'Business ID',
                   readOnly: true,
@@ -53,7 +54,7 @@ class AddSystemSettingsView extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 /// Bill Prefix
-                _CircularInputField(
+                CircularInputField(
                   controller: controller.billPrefixController,
                   labelText: 'Bill Prefix',
                   hintText: 'Enter bill prefix (e.g., INV)',
@@ -62,7 +63,7 @@ class AddSystemSettingsView extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 /// Quote
-                _CircularInputField(
+                CircularInputField(
                   controller: controller.quoteController,
                   labelText: 'Quote',
                   hintText: 'Enter quote',
@@ -71,7 +72,7 @@ class AddSystemSettingsView extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 /// Firm Name
-                _CircularInputField(
+                CircularInputField(
                   controller: controller.firmNameController,
                   labelText: 'Firm Name',
                   hintText: 'Enter firm name',
@@ -80,7 +81,7 @@ class AddSystemSettingsView extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 /// Firm Contact 1
-                _CircularInputField(
+                CircularInputField(
                   controller: controller.firmContact1Controller,
                   labelText: 'Firm Contact 1',
                   hintText: 'Enter primary contact number',
@@ -91,7 +92,7 @@ class AddSystemSettingsView extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 /// Firm Contact 2
-                _CircularInputField(
+                CircularInputField(
                   controller: controller.firmContact2Controller,
                   labelText: 'Firm Contact 2',
                   hintText: 'Enter secondary contact number (optional)',
@@ -100,7 +101,7 @@ class AddSystemSettingsView extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 /// File
-                _CircularInputField(
+                CircularInputField(
                   controller: controller.fileController,
                   labelText: 'File',
                   hintText: 'Enter file name or path',
@@ -110,7 +111,7 @@ class AddSystemSettingsView extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 /// Bill Address
-                _CircularInputField(
+                CircularInputField(
                   controller: controller.billAddressController,
                   labelText: 'Bill Address',
                   hintText: 'Enter billing address',
@@ -121,7 +122,7 @@ class AddSystemSettingsView extends StatelessWidget {
                 const SizedBox(height: 16),
 
                 /// GSTIN Number
-                _CircularInputField(
+                CircularInputField(
                   controller: controller.billGstinNumController,
                   labelText: 'Bill GSTIN Number',
                   hintText: 'Enter GSTIN number',
@@ -209,59 +210,4 @@ class AddSystemSettingsView extends StatelessWidget {
   }
 }
 
-/// --------------------------
-/// Custom Circular Input Widget
-/// --------------------------
-class _CircularInputField extends StatelessWidget {
-  final TextEditingController controller;
-  final String labelText;
-  final String? hintText;
-  final bool readOnly;
-  final Color? fillColor;
-  final TextInputType? keyboardType;
-  final String? Function(String?)? validator;
-  final int maxLines;
 
-  const _CircularInputField({
-    required this.controller,
-    required this.labelText,
-    this.hintText,
-    this.readOnly = false,
-    this.fillColor,
-    this.keyboardType,
-    this.validator,
-    this.maxLines = 1,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return TextFormField(
-      controller: controller,
-      readOnly: readOnly,
-      keyboardType: keyboardType,
-      maxLines: maxLines,
-      validator: validator,
-      decoration: InputDecoration(
-        labelText: labelText,
-        hintText: hintText,
-        filled: fillColor != null,
-        fillColor: fillColor,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30), // Circular border
-        ),
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: Colors.grey),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: Colors.orange),
-        ),
-        errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(30),
-          borderSide: const BorderSide(color: Colors.red),
-        ),
-      ),
-    );
-  }
-}

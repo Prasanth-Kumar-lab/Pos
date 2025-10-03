@@ -137,7 +137,7 @@ class AddProductsController extends GetxController {
   Future<void> updateProduct(String productCode, Map<String, String> params) async {
     params['product_code'] = productCode;
     params['business_id'] = businessId;
-    final request = http.MultipartRequest('POST', Uri.parse('${ApiConstants.productsEndPoint}'));
+    final request = http.MultipartRequest('POST', Uri.parse('${ApiConstants.updateProductsEndPoint}'));
     request.fields.addAll(params);
 
     try {

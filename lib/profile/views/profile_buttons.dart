@@ -7,7 +7,7 @@ import 'package:task/AddProducts/Views/add-products_view.dart';
 import 'package:task/Add_Tax/Views/add_tax_view.dart';
 import 'package:task/login/views/login_screen.dart';
 import '../../AddSystemSettings/view/system_settings_view.dart';
-import 'biller_profile.dart';
+import 'profile_page.dart';
 import '../widgets/profile_action_button.dart';
 
 class ProfileButtons extends StatelessWidget {
