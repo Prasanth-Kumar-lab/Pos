@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../login/views/login_screen.dart';
 import '../controller/profile_controller.dart';
 
@@ -35,7 +36,7 @@ class ProfilePage extends StatelessWidget {
         ),
       ),
       body: Container(
-        color: Colors.orange.withOpacity(0.4),
+        color: Colors.white,
         width: double.infinity,
         height: double.infinity,
         child: Obx(() {
@@ -46,7 +47,6 @@ class ProfilePage extends StatelessWidget {
               ),
             );
           }
-
           final data = controller.profile.value!;
           return SingleChildScrollView(
             padding: const EdgeInsets.all(16.0),
@@ -65,7 +65,6 @@ class ProfilePage extends StatelessWidget {
       ),
     );
   }
-
   Widget _buildProfileHeader(String? name, String? username) {
     return Center(
       child: Column(
@@ -77,7 +76,7 @@ class ProfilePage extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            name ?? 'No Name Provided',
+            name!.isEmpty ? 'No Name Provided' : name,
             style: TextStyle(
               fontSize: 24,
               fontWeight: FontWeight.bold,
@@ -86,7 +85,7 @@ class ProfilePage extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            '${username ?? "N/A"}',
+            username!.isEmpty ? 'No Username Provided' : username,
             style: TextStyle(fontSize: 16, color: Colors.grey[700]),
           ),
         ],
@@ -108,12 +107,11 @@ class ProfilePage extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             _buildDetailRow('User ID:', userId),
-            _buildDetailRow('Mobile Number:', data.mobileNumber ?? 'N/A'),
-            _buildDetailRow('Aadhar Number:', data.aadharNumber ?? 'N/A'),
-            _buildDetailRow('Address:', data.address ?? 'N/A'),
+            _buildDetailRow('Mobile Number:', data.mobileNumber!.isEmpty ? 'Not Provided' : data.mobileNumber!),
+            _buildDetailRow('Address:', data.address!.isEmpty ? 'Not Provided' : data.address!),
             _buildDetailRow('Business ID:', businessId),
-            _buildDetailRow('Role:', data.role ?? role),
-            _buildPasswordRow(controller, data.password ?? ''),
+            _buildDetailRow('Role:', data.role!.isEmpty ? role : data.role!),
+            _buildPasswordRow(controller, data.password!),
           ],
         ),
       ),
@@ -236,8 +234,12 @@ class ProfilePage extends StatelessWidget {
                       child: const Text('Cancel'),
                     ),
                     TextButton(
-                      onPressed: () {
-                        Get.offAll(() => const LoginScreen());
+                      onPressed: () async {
+                          final prefs = await SharedPreferences.getInstance();
+                          await prefs.clear(); // Clear all saved login data
+
+                          Get.offAll(() => const LoginScreen()); // Navigate to login screen
+
                         Get.snackbar(
                           'Logged Out',
                           'You have been logged out successfully.',
@@ -280,78 +282,72 @@ class ProfilePage extends StatelessWidget {
     final passwordController = TextEditingController(text: profile?.password ?? '');
     final mobileNumberController = TextEditingController(text: profile?.mobileNumber ?? '');
     final roleController = TextEditingController(text: profile?.role ?? role);
-    final aadharNumberController = TextEditingController(text: profile?.aadharNumber ?? '');
     final addressController = TextEditingController(text: profile?.address ?? '');
 
     Get.dialog(
       AlertDialog(
         title: const Text('Edit Profile', style: TextStyle(fontWeight: FontWeight.bold)),
-        content: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              TextField(
-                controller: nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Name',
-                  errorText: null,
-                ),
-              ),
-              TextField(
-                controller: usernameController,
-                decoration: const InputDecoration(
-                  labelText: 'Username',
-                  errorText: null,
-                ),
-              ),
-              Obx(() => TextField(
-                controller: passwordController,
-                decoration: InputDecoration(
-                  labelText: 'Password (optional, min 8 characters)',
-                  errorText: null,
-                  suffixIcon: IconButton(
-                    icon: Icon(
-                      controller.editPasswordVisible.value ? Icons.visibility : Icons.visibility_off,
-                      color: Colors.blueGrey.shade900,
-                    ),
-                    onPressed: () {
-                      controller.toggleEditPasswordVisibility();
-                    },
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.9,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Name',
+                    errorText: null,
                   ),
                 ),
-                obscureText: controller.editPasswordVisible.value,
-              )),
-              TextField(
-                controller: mobileNumberController,
-                decoration: const InputDecoration(
-                  labelText: 'Mobile Number',
-                  errorText: null,
+                TextField(
+                  controller: usernameController,
+                  decoration: const InputDecoration(
+                    labelText: 'Username',
+                    errorText: null,
+                  ),
                 ),
-                keyboardType: TextInputType.phone,
-              ),
-              TextField(
-                controller: roleController,
-                decoration: const InputDecoration(
-                  labelText: 'Role',
-                  errorText: null,
+                Obx(() => TextField(
+                  controller: passwordController,
+                  decoration: InputDecoration(
+                    labelText: 'Password (optional, min 8 characters)',
+                    errorText: null,
+                    suffixIcon: IconButton(
+                      icon: Icon(
+                        controller.editPasswordVisible.value ? Icons.visibility : Icons.visibility_off,
+                        color: Colors.blueGrey.shade900,
+                      ),
+                      onPressed: () {
+                        controller.toggleEditPasswordVisibility();
+                      },
+                    ),
+                  ),
+                  obscureText: !controller.editPasswordVisible.value,
+                )),
+                TextField(
+                  controller: mobileNumberController,
+                  decoration: const InputDecoration(
+                    labelText: 'Mobile Number',
+                    errorText: null,
+                  ),
+                  keyboardType: TextInputType.phone,
                 ),
-              ),
-              TextField(
-                controller: aadharNumberController,
-                decoration: const InputDecoration(
-                  labelText: 'Aadhar Number',
-                  errorText: null,
+                TextField(
+                  controller: roleController,
+                  decoration: const InputDecoration(
+                    labelText: 'Role',
+                    errorText: null,
+                  ),
                 ),
-                keyboardType: TextInputType.number,
-              ),
-              TextField(
-                controller: addressController,
-                decoration: const InputDecoration(
-                  labelText: 'Address',
-                  errorText: null,
+                TextField(
+                  controller: addressController,
+                  decoration: const InputDecoration(
+                    labelText: 'Address',
+                    errorText: null,
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
         actions: [
@@ -366,7 +362,6 @@ class ProfilePage extends StatelessWidget {
                   usernameController.text.isEmpty ||
                   mobileNumberController.text.isEmpty ||
                   roleController.text.isEmpty ||
-                  aadharNumberController.text.isEmpty ||
                   addressController.text.isEmpty) {
                 Get.snackbar(
                   'Error',
@@ -378,7 +373,7 @@ class ProfilePage extends StatelessWidget {
               }
 
               // Password validation (optional, but if provided, must be at least 8 characters)
-              if (passwordController.text.isNotEmpty && passwordController.text.length < 6) {
+              if (passwordController.text.isNotEmpty && passwordController.text.length < 8) {
                 Get.snackbar(
                   'Error',
                   'Password must be at least 8 characters long',
@@ -394,7 +389,7 @@ class ProfilePage extends StatelessWidget {
                 password: passwordController.text.isEmpty ? null : passwordController.text,
                 mobileNumber: mobileNumberController.text,
                 role: roleController.text,
-                aadharNumber: aadharNumberController.text,
+                aadharNumber: '', // Since Aadhar is commented out, pass empty string
                 address: addressController.text,
               );
               Get.back(); // Close the dialog after updating

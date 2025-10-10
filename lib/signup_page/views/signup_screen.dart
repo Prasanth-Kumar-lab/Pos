@@ -102,7 +102,7 @@ class SignupScreen extends StatelessWidget {
                       },
                     )),
                     const SizedBox(height: 16),
-                    CustomTextField(
+                    /*CustomTextField(
                       controller: controller.aadharNumberController,
                       label: 'Aadhar Number',
                       icon: Icons.badge_outlined,
@@ -117,7 +117,7 @@ class SignupScreen extends StatelessWidget {
                         return null;
                       },
                     ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 16),*/
                     CustomTextField(
                       controller: controller.addressController,
                       label: 'Address',

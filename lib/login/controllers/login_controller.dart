@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:task/home_screen/view/view.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+
 import '../../api_endpoints.dart';
+import '../../home_screen/view/view.dart';
 import '../../profile/views/profile_buttons.dart';
 
 class LoginController extends GetxController {
@@ -34,21 +36,23 @@ class LoginController extends GetxController {
         final data = jsonDecode(response.body);
         if (data['status'] == 'Success') {
           isLoading.value = false;
-          Get.snackbar(
-            'Success',
-            data['message'] ?? 'Login successful',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.green.shade600,
-            colorText: Colors.white,
-          );
 
-          // Extract data from API response
           final String name = data['name'] ?? 'User';
           final String mobileNumber = data['number'] ?? 'N/A';
           final String role = data['role'] ?? 'N/A';
           final String username = usernameController.text.trim();
           final String businessId = data['business_id'] ?? 'Not generated';
           final String user_id = data['id'] ?? 'N/A';
+
+          // Save user data in SharedPreferences
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLoggedIn', true);
+          await prefs.setString('role', role);
+          await prefs.setString('name', name);
+          await prefs.setString('username', username);
+          await prefs.setString('mobileNumber', mobileNumber);
+          await prefs.setString('businessId', businessId);
+          await prefs.setString('user_id', user_id);
 
           // Navigate based on role
           if (role == 'Admin') {
@@ -59,7 +63,7 @@ class LoginController extends GetxController {
               businessId: businessId,
               role: role,
               user_id: user_id,
-            )); // Navigate to ProfileButtons for Admin
+            ));
           } else if (role == 'Biller') {
             Get.offAll(() => HomeScreen(
               name: name,
@@ -68,13 +72,11 @@ class LoginController extends GetxController {
               businessId: businessId,
               role: role,
               user_id: user_id,
-            )); // Navigate to HomeScreen for Biller
+            ));
           } else {
-            // Handle unexpected role
             Get.snackbar(
               'Error',
               'Invalid role: $role',
-              snackPosition: SnackPosition.BOTTOM,
               backgroundColor: Colors.red,
               colorText: Colors.white,
             );
@@ -84,7 +86,6 @@ class LoginController extends GetxController {
           Get.snackbar(
             'Error',
             data['message'] ?? 'Login failed',
-            snackPosition: SnackPosition.BOTTOM,
             backgroundColor: Colors.red,
             colorText: Colors.white,
           );
@@ -94,12 +95,17 @@ class LoginController extends GetxController {
         Get.snackbar(
           'Error',
           'Something went wrong: $e',
-          snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
       }
     }
+  }
+
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear();
+    Get.offAllNamed('/login');
   }
 
   @override

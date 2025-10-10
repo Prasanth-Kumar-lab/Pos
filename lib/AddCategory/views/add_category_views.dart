@@ -56,34 +56,6 @@ class AddCategoryView extends StatelessWidget {
                     return null;
                   },
                 ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: businessIdController,
-                  decoration: InputDecoration(
-                    labelText: 'Business ID',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide(color: Colors.grey.shade400),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: const BorderSide(color: Colors.orange, width: 2),
-                    ),
-                    prefixIcon: const Icon(Icons.business_center_outlined),
-                    contentPadding: const EdgeInsets.symmetric(
-                        vertical: 16, horizontal: 20),
-                  ),
-                  readOnly: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a business ID';
-                    }
-                    return null;
-                  },
-                ),
                 const SizedBox(height: 20),
                 Obx(
                       () => controller.isLoading.value

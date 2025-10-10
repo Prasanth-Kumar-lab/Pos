@@ -28,12 +28,15 @@ class _AddProductsPageState extends State<AddProductsPage>
   String? _selectedCgst;
   String? _selectedSgst;
   String? _selectedIgst;
+  String? _selectedAvailabilityStatus; // New variable for availability status
 
   @override
   void initState() {
     super.initState();
     _businessIdController.text = widget.businessId;
     controller = Get.put(AddProductsController(businessId: widget.businessId));
+    _availabilityStatusController.text = 'Available'; // Default to "Yes"
+    _selectedAvailabilityStatus = 'Available'; // Default to "Yes"
   }
 
   @override
@@ -50,7 +53,6 @@ class _AddProductsPageState extends State<AddProductsPage>
   void _submitForm() {
     if (_formKey.currentState!.validate()) {
       final params = {
-
         'product_code': _productCodeController.text,
         'product_cat': _selectedCategory ?? '',
         'item_name': _itemNameController.text,
@@ -59,7 +61,7 @@ class _AddProductsPageState extends State<AddProductsPage>
         'cgst': _selectedCgst ?? '',
         'sgst': _selectedSgst ?? '',
         'igst': _selectedIgst ?? '',
-        'availability_status': _availabilityStatusController.text,
+        'availability_status': _selectedAvailabilityStatus ?? '', // Use selected value
         'business_id': _businessIdController.text,
       };
       controller.addProduct(params);
@@ -76,7 +78,8 @@ class _AddProductsPageState extends State<AddProductsPage>
     _selectedCgst = null;
     _selectedSgst = null;
     _selectedIgst = null;
-    _availabilityStatusController.clear();
+    _selectedAvailabilityStatus = 'Available'; // Reset to "Yes" on clear
+    _availabilityStatusController.text = 'Available'; // Reset text field
     _businessIdController.text = widget.businessId;
     setState(() {});
   }
@@ -178,31 +181,15 @@ class _AddProductsPageState extends State<AddProductsPage>
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
             const Text(
-              'Business Information',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            buildCircularBorderTextField(
-              controller: _businessIdController,
-              label: 'Business ID',
-              icon: Icons.business,
-              validator: (value) => value!.isEmpty ? 'Required' : null,
-              readOnly: true,
-            ),
-            const SizedBox(height: 24),
-            const Text(
               'Product Information',
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
-            const SizedBox(height: 16),
-
             const SizedBox(height: 16),
             buildCircularBorderTextField(
               controller: _productCodeController,
               label: 'Product Code',
               icon: Icons.qr_code,
               validator: (value) => value!.isEmpty ? 'Required' : null,
-
             ),
             const SizedBox(height: 16),
             Obx(() => DropdownButtonFormField2<String>(
@@ -323,11 +310,59 @@ class _AddProductsPageState extends State<AddProductsPage>
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
-            buildCircularBorderTextField(
-              controller: _availabilityStatusController,
-              label: 'Availability Status',
-              icon: Icons.check_circle_outline,
-              validator: (value) => value!.isEmpty ? 'Required' : null,
+            DropdownButtonFormField2<String>(
+              decoration: InputDecoration(
+                labelText: 'Availability Status',
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(30),
+                ),
+                prefixIcon: const Icon(Icons.check_circle_outline),
+              ),
+              value: _selectedAvailabilityStatus,
+              hint: const Text('Select Availability'),
+              items: [
+                DropdownMenuItem<String>(
+                  value: 'Available',
+                  child: SizedBox(
+                    height: 40,
+                    child: Text('Available'),
+                  ),
+                ),
+                DropdownMenuItem<String>(
+                  value: 'Un-Available',
+                  child: SizedBox(
+                    height: 40,
+                    child: Text('Un-Available'),
+                  ),
+                ),
+              ],
+              onChanged: (String? newValue) {
+                setState(() {
+                  _selectedAvailabilityStatus = newValue;
+                  _availabilityStatusController.text = newValue ?? '';
+                });
+              },
+              validator: (value) => value == null ? 'Please select availability status' : null,
+              dropdownStyleData: DropdownStyleData(
+                maxHeight: 200,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(30),
+                  border: Border.all(color: Colors.grey.shade300),
+                ),
+                scrollbarTheme: ScrollbarThemeData(
+                  radius: const Radius.circular(40),
+                  thickness: MaterialStateProperty.all(6),
+                  thumbColor: MaterialStateProperty.all(Colors.grey),
+                ),
+              ),
+              buttonStyleData: const ButtonStyleData(
+                padding: EdgeInsets.symmetric(horizontal: 16),
+                height: 26,
+              ),
+              iconStyleData: const IconStyleData(
+                icon: Icon(Icons.arrow_drop_down),
+                iconSize: 24,
+              ),
             ),
             const SizedBox(height: 24),
             ElevatedButton.icon(

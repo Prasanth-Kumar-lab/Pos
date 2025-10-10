@@ -29,6 +29,7 @@ class _EditProductPageState extends State<EditProductPage> {
   String? _selectedCgst;
   String? _selectedSgst;
   String? _selectedIgst;
+  String? _selectedAvailabilityStatus; // New variable for availability status
 
   @override
   void initState() {
@@ -86,6 +87,14 @@ class _EditProductPageState extends State<EditProductPage> {
         _selectedIgst = igstValues.contains(widget.product.igst)
             ? widget.product.igst
             : (igstValues.isNotEmpty ? igstValues.first : null);
+
+        // Validate Availability Status
+        _selectedAvailabilityStatus = widget.product.availabilityStatus == 'yes' || widget.product.availabilityStatus == 'Yes'
+            ? 'Yes'
+            : widget.product.availabilityStatus == 'no' || widget.product.availabilityStatus == 'No'
+            ? 'No'
+            : 'Yes'; // Default to "Yes" if invalid
+        _availabilityStatusController.text = _selectedAvailabilityStatus ?? 'Yes';
       });
     });
   }
@@ -114,7 +123,7 @@ class _EditProductPageState extends State<EditProductPage> {
         'cgst': _selectedCgst ?? '',
         'sgst': _selectedSgst ?? '',
         'igst': _selectedIgst ?? '',
-        'availability_status': _availabilityStatusController.text,
+        'availability_status': _selectedAvailabilityStatus ?? '', // Use selected value
         'business_id': _businessIdController.text,
       };
       controller.updateProduct(widget.product.productCode, params);
@@ -231,56 +240,167 @@ class _EditProductPageState extends State<EditProductPage> {
 
   Widget _buildFormFields() {
     return Form(
-      key: _formKey,
-      child: SingleChildScrollView(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'Business Information',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            buildCircularBorderTextField(
-              controller: _businessIdController,
-              label: 'Business ID',
-              icon: Icons.business,
-              validator: (value) => value!.isEmpty ? 'Required' : null,
-              readOnly: true,
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Product Information',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            buildCircularBorderTextField(
-              controller: _productIdController,
-              label: 'Product ID',
-              icon: Icons.abc,
-              validator: (value) => value!.isEmpty ? 'Required' : null,
-              readOnly: true,
-            ),
-            const SizedBox(height: 16),
-            buildCircularBorderTextField(
-              controller: _productCodeController,
-              label: 'Product Code',
-              icon: Icons.qr_code,
-              validator: (value) => value!.isEmpty ? 'Required' : null,
-              readOnly: true,
-            ),
-            const SizedBox(height: 16),
-            Obx(() {
-              final categoryNames = controller.categories
-                  .map((cat) => cat.catName)
-                  .toSet()
-                  .toList();
-              print('Category available values: $categoryNames');
-              print('Category selected value: $_selectedCategory');
+        key: _formKey,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const Text(
+                'Product Information',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              buildCircularBorderTextField(
+                controller: _productIdController,
+                label: 'Product ID',
+                icon: Icons.abc,
+                validator: (value) => value!.isEmpty ? 'Required' : null,
+                readOnly: true,
+              ),
+              const SizedBox(height: 16),
+              buildCircularBorderTextField(
+                controller: _productCodeController,
+                label: 'Product Code',
+                icon: Icons.qr_code,
+                validator: (value) => value!.isEmpty ? 'Required' : null,
+                readOnly: true,
+              ),
+              const SizedBox(height: 16),
+              Obx(() {
+                final categoryNames = controller.categories
+                    .map((cat) => cat.catName)
+                    .toSet()
+                    .toList();
+                print('Category available values: $categoryNames');
+                print('Category selected value: $_selectedCategory');
 
-              return DropdownButtonFormField2<String>(
+                return DropdownButtonFormField2<String>(
+                  decoration: InputDecoration(
+                    labelText: 'Product Category',
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: BorderSide(color: Colors.grey.shade400),
+                    ),
+                    focusedBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(30),
+                      borderSide: const BorderSide(color: Colors.orange, width: 2),
+                    ),
+                    prefixIcon: const Icon(Icons.category),
+                  ),
+                  value: categoryNames.contains(_selectedCategory) ? _selectedCategory : null,
+                  hint: const Text('Select a category'),
+                  items: categoryNames.map((catName) {
+                    return DropdownMenuItem<String>(
+                      value: catName,
+                      child: Text(catName),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    setState(() {
+                      _selectedCategory = newValue;
+                    });
+                  },
+                  validator: (value) => value == null ? 'Please select a category' : null,
+                  dropdownStyleData: DropdownStyleData(
+                    maxHeight: 200,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(30),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    scrollbarTheme: ScrollbarThemeData(
+                      radius: const Radius.circular(40),
+                      thickness: MaterialStateProperty.all(6),
+                      thumbColor: MaterialStateProperty.all(Colors.grey),
+                    ),
+                  ),
+                  buttonStyleData: const ButtonStyleData(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    height: 30,
+                  ),
+                  iconStyleData: const IconStyleData(
+                    icon: Icon(Icons.arrow_drop_down),
+                    iconSize: 24,
+                  ),
+                );
+              }),
+              const SizedBox(height: 24),
+              const Text(
+                'Item Details',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              buildCircularBorderTextField(
+                controller: _itemNameController,
+                label: 'Item Name',
+                icon: Icons.inventory,
+                validator: (value) => value!.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              buildCircularBorderTextField(
+                controller: _sellingPriceController,
+                label: 'Selling Price',
+                icon: Icons.currency_rupee,
+                keyboardType: TextInputType.number,
+                validator: (value) => value!.isEmpty ? 'Required' : null,
+              ),
+              const SizedBox(height: 16),
+              buildCircularBorderTextField(
+                controller: _unitsController,
+                label: 'Units',
+                icon: Icons.confirmation_number,
+                validator: (value) => value!.isEmpty ? 'Required' : null,
+                keyboardType: TextInputType.text, // Allow text for units (e.g., "kg", "pcs")
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Tax Details',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              _buildTaxDropdown(
+                label: 'CGST',
+                taxType: 'CGST',
+                selectedValue: _selectedCgst,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedCgst = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTaxDropdown(
+                label: 'SGST',
+                taxType: 'SGST',
+                selectedValue: _selectedSgst,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedSgst = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+              _buildTaxDropdown(
+                label: 'IGST',
+                taxType: 'IGST',
+                selectedValue: _selectedIgst,
+                onChanged: (value) {
+                  setState(() {
+                    _selectedIgst = value;
+                  });
+                },
+              ),
+              const SizedBox(height: 24),
+              const Text(
+                'Availability',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 16),
+              DropdownButtonFormField2<String>(
                 decoration: InputDecoration(
-                  labelText: 'Product Category',
+                  labelText: 'Availability Status',
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(30),
                   ),
@@ -292,22 +412,33 @@ class _EditProductPageState extends State<EditProductPage> {
                     borderRadius: BorderRadius.circular(30),
                     borderSide: const BorderSide(color: Colors.orange, width: 2),
                   ),
-                  prefixIcon: const Icon(Icons.category),
+                  prefixIcon: const Icon(Icons.check_circle_outline),
                 ),
-                value: categoryNames.contains(_selectedCategory) ? _selectedCategory : null,
-                hint: const Text('Select a category'),
-                items: categoryNames.map((catName) {
-                  return DropdownMenuItem<String>(
-                    value: catName,
-                    child: Text(catName),
-                  );
-                }).toList(),
+                value: _selectedAvailabilityStatus,
+                hint: const Text('Select Availability'),
+                items: const [
+                  DropdownMenuItem<String>(
+                    value: 'Yes',
+                    child: SizedBox(
+                      height: 40,
+                      child: Text('Available'),
+                    ),
+                  ),
+                  DropdownMenuItem<String>(
+                    value: 'No',
+                    child: SizedBox(
+                      height: 40,
+                      child: Text('Un-Available'),
+                    ),
+                  ),
+                ],
                 onChanged: (String? newValue) {
                   setState(() {
-                    _selectedCategory = newValue;
+                    _selectedAvailabilityStatus = newValue;
+                    _availabilityStatusController.text = newValue ?? '';
                   });
                 },
-                validator: (value) => value == null ? 'Please select a category' : null,
+                validator: (value) => value == null ? 'Please select availability status' : null,
                 dropdownStyleData: DropdownStyleData(
                   maxHeight: 200,
                   decoration: BoxDecoration(
@@ -328,119 +459,39 @@ class _EditProductPageState extends State<EditProductPage> {
                   icon: Icon(Icons.arrow_drop_down),
                   iconSize: 24,
                 ),
-              );
-            }),
-            const SizedBox(height: 24),
-            const Text(
-              'Item Details',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            buildCircularBorderTextField(
-              controller: _itemNameController,
-              label: 'Item Name',
-              icon: Icons.inventory,
-              validator: (value) => value!.isEmpty ? 'Required' : null,
-            ),
-            const SizedBox(height: 16),
-            buildCircularBorderTextField(
-              controller: _sellingPriceController,
-              label: 'Selling Price',
-              icon: Icons.currency_rupee,
-              keyboardType: TextInputType.number,
-              validator: (value) => value!.isEmpty ? 'Required' : null,
-            ),
-            const SizedBox(height: 16),
-            buildCircularBorderTextField(
-              controller: _unitsController,
-              label: 'Units',
-              icon: Icons.confirmation_number,
-              validator: (value) => value!.isEmpty ? 'Required' : null,
-              keyboardType: TextInputType.text, // Allow text for units (e.g., "kg", "pcs")
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Tax Details',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            _buildTaxDropdown(
-              label: 'CGST',
-              taxType: 'CGST',
-              selectedValue: _selectedCgst,
-              onChanged: (value) {
-                setState(() {
-                  _selectedCgst = value;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            _buildTaxDropdown(
-              label: 'SGST',
-              taxType: 'SGST',
-              selectedValue: _selectedSgst,
-              onChanged: (value) {
-                setState(() {
-                  _selectedSgst = value;
-                });
-              },
-            ),
-            const SizedBox(height: 16),
-            _buildTaxDropdown(
-              label: 'IGST',
-              taxType: 'IGST',
-              selectedValue: _selectedIgst,
-              onChanged: (value) {
-                setState(() {
-                  _selectedIgst = value;
-                });
-              },
-            ),
-            const SizedBox(height: 24),
-            const Text(
-              'Availability',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            buildCircularBorderTextField(
-              controller: _availabilityStatusController,
-              label: 'Availability Status',
-              icon: Icons.check_circle_outline,
-              validator: (value) => value!.isEmpty ? 'Required' : null,
-            ),
-            const SizedBox(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-              children: [
-                ElevatedButton.icon(
-                  onPressed: _updateProduct,
-                  icon: Icon(Icons.update, color: Colors.blueGrey.shade900),
-                  label: const Text('Update', style: TextStyle(fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.orange.shade700,
-                    foregroundColor: Colors.black,
-                    minimumSize: const Size(150, 50),
-                    textStyle: const TextStyle(fontSize: 16),
+              ),
+              const SizedBox(height: 24),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  ElevatedButton.icon(
+                    onPressed: _updateProduct,
+                    icon: Icon(Icons.update, color: Colors.blueGrey.shade900),
+                    label: const Text('Update', style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.orange.shade700,
+                      foregroundColor: Colors.black,
+                      minimumSize: const Size(150, 50),
+                      textStyle: const TextStyle(fontSize: 16),
+                    ),
                   ),
-                ),
-                ElevatedButton.icon(
-                  onPressed: () => Navigator.pop(context),
-                  icon: Icon(Icons.cancel, color: Colors.blueGrey.shade900),
-                  label: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.grey.shade300,
-                    foregroundColor: Colors.black,
-                    minimumSize: const Size(150, 50),
-                    textStyle: const TextStyle(fontSize: 16),
+                  ElevatedButton.icon(
+                    onPressed: () => Navigator.pop(context),
+                    icon: Icon(Icons.cancel, color: Colors.blueGrey.shade900),
+                    label: const Text('Cancel', style: TextStyle(fontWeight: FontWeight.bold)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.grey.shade300,
+                      foregroundColor: Colors.black,
+                      minimumSize: const Size(150, 50),
+                      textStyle: const TextStyle(fontSize: 16),
+                    ),
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-          ],
-        ),
-      ),
-    );
+                ],
+              ),
+              const SizedBox(height: 16),
+            ],
+          ),
+        ));
   }
 
   @override

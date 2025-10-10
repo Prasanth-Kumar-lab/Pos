@@ -44,15 +44,6 @@ class AddSystemSettingsView extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
 
-                /// Business ID (ReadOnly)
-                CircularInputField(
-                  controller: controller.businessIdController,
-                  labelText: 'Business ID',
-                  readOnly: true,
-                  fillColor: Colors.orange.shade100,
-                ),
-                const SizedBox(height: 16),
-
                 /// Bill Prefix
                 CircularInputField(
                   controller: controller.billPrefixController,
@@ -177,8 +168,6 @@ class AddSystemSettingsView extends StatelessWidget {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            Text('Business ID: ${controller.savedData.value!['business_id']}'),
-                            const SizedBox(height: 8),
                             Text('Bill Prefix: ${controller.savedData.value!['bill_prefix']}'),
                             const SizedBox(height: 8),
                             Text('Quote: ${controller.savedData.value!['quote']}'),
@@ -209,5 +198,3 @@ class AddSystemSettingsView extends StatelessWidget {
     );
   }
 }
-
-

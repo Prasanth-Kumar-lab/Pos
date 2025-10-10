@@ -1,13 +1,19 @@
+/*
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:http/http.dart' as http;
 import 'package:lottie/lottie.dart';
 import 'package:shimmer/shimmer.dart';
 import 'package:flutter_slidable/flutter_slidable.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:task/profile/views/profile_page.dart';
 import 'package:task/print/views/print_screen.dart';
+import '../../print/controller/print_controller.dart';
 import '../controller/controller.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_bluetooth_printer/flutter_bluetooth_printer_library.dart';
+import '../model/product_model.dart';
+
 class HomeScreen extends StatefulWidget {
   final String name;
   final String username;
@@ -32,15 +38,21 @@ class HomeScreen extends StatefulWidget {
 
 class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
   late final ProductController _controller;
-
   AnimationController? _animationController;
   Animation<double>? _fadeAnimation;
-  PersistentBottomSheetController? _bottomSheetController;
-  bool _isBottomSheetVisible = false;
 
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final printController = Get.find<PrintController>();
+      printController.initializePrinterConnection(context);
+    });
+    Get.put(PrintController(
+      initialProducts: [],
+      initialTotal: 0.0,
+      businessId: widget.businessId,
+    ));
     _controller = Get.put(ProductController(
       businessId: widget.businessId,
       billerId: widget.user_id,
@@ -60,466 +72,1628 @@ class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateM
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text('Hello ${widget.name}.', style: TextStyle(fontWeight: FontWeight.w600)),
-        leading: IconButton(
-          onPressed: () {
-            Get.to(() => ProfilePage(
-              businessId: widget.businessId,
-              user_id: widget.user_id,
-              role: widget.role,
-            ));
-          },
-          icon: Icon(CupertinoIcons.profile_circled, size: 30, color: Colors.blueGrey.shade900),
+    return ScaffoldMessenger(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Hello ${widget.name}.', style: TextStyle(fontWeight: FontWeight.w600)),
+          leading: IconButton(
+            onPressed: () {
+              Get.to(() => ProfilePage(
+                businessId: widget.businessId,
+                user_id: widget.user_id,
+                role: widget.role,
+              ));
+            },
+            icon: Icon(CupertinoIcons.profile_circled, size: 30, color: Colors.blueGrey.shade900),
+          ),
+          backgroundColor: Colors.orange.withOpacity(0.6),
+          actions: [
+            IconButton(onPressed: _controller.fetchProducts, icon: Icon(Icons.sync)),
+          ],
         ),
-        backgroundColor: Colors.orange.withOpacity(0.6),
-        actions: [
-          IconButton(onPressed: _controller.fetchProducts, icon: Icon(Icons.sync)),
-        ],
-      ),
-      floatingActionButton: Obx(() {
-        if (_controller.cartItemCount.value > 0 && !_isBottomSheetVisible) {
-          return Builder(
-            builder: (context) => FloatingActionButton.extended(
-              onPressed: () {
-                _showCartBottomSheet(context);
-              },
-              icon: Stack(
-                children: <Widget>[
-                  Icon(Icons.shopping_cart),
-                  if (_controller.cartItemCount.value > 0)
-                    Positioned(
-                      right: 0,
-                      child: Container(
-                        padding: EdgeInsets.all(1),
-                        decoration: BoxDecoration(
-                          color: Colors.red,
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        constraints: BoxConstraints(
-                          minWidth: 12,
-                          minHeight: 12,
-                        ),
-                        child: Text(
-                          '${_controller.cartItemCount.value}',
-                          style: TextStyle(
-                            color: Colors.white,
-                            fontSize: 8,
+        body: Stack(
+          children: [
+            Container(
+              color: Colors.orange.withOpacity(0.4),
+              child: GestureDetector(
+                onTap: () => FocusScope.of(context).unfocus(),
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: TextField(
+                          onChanged: (value) => _controller.filterProducts(value),
+                          decoration: InputDecoration(
+                            hintText: 'Search products...',
+                            prefixIcon: Icon(Icons.search),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.blueAccent),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.blue, width: 2),
+                            ),
                           ),
-                          textAlign: TextAlign.center,
                         ),
                       ),
-                    )
-                ],
-              ),
-              label: Text('View Cart'),
-              backgroundColor: Colors.orangeAccent,
-            ),
-          );
-        }
-        return SizedBox.shrink();
-      }),
-      body: Container(
-        color: Colors.orange.withOpacity(0.4),
-        child: GestureDetector(
-          onTap: () => FocusScope.of(context).unfocus(),
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(12.0),
-                child: TextField(
-                  onChanged: (value) => _controller.filterProducts(value),
-                  decoration: InputDecoration(
-                    hintText: 'Search products...',
-                    prefixIcon: Icon(Icons.search),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.blueAccent),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                      borderSide: BorderSide(color: Colors.blue, width: 2),
-                    ),
+                      Expanded(
+                        child: Obx(() => _controller.isLoading.value
+                            ? _buildShimmerGrid()
+                            : _controller.errorMessage.isNotEmpty
+                            ? Center(child: Text(_controller.errorMessage.value))
+                            : _controller.filteredProducts.isEmpty
+                            ? Container(
+                          color: Colors.white,
+                          child: Center(
+                            child: Container(
+                              height: double.infinity,
+                              width: double.infinity,
+                              child: Lottie.asset('assets/No Data found.json'),
+                            ),
+                          ),
+                        )
+                            : Scrollbar(
+                          thumbVisibility: true,
+                          radius: Radius.circular(10),
+                          thickness: 6,
+                          child: GridView.builder(
+                            padding: EdgeInsets.only(
+                              left: 7,
+                              right: 7,
+                              top: 7,
+                              bottom: _controller.cartItemCount.value > 0 ? 120 : 7,
+                            ),
+                            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                              crossAxisCount: 2,
+                              childAspectRatio: 0.85,
+                              crossAxisSpacing: 3,
+                              mainAxisSpacing: 3,
+                            ),
+                            itemCount: _controller.filteredProducts.length,
+                            itemBuilder: (context, index) {
+                              final product = _controller.filteredProducts[index];
+                              final originalIndex = _controller.products.indexOf(product);
+                              print('Grid Item at index $index: '
+                                  'itemName: ${product.itemName != null ? "Displayed (${product.itemName})" : "Not Displayed"}, '
+                                  'sellingPrice: ${product.sellingPrice != null ? "Displayed (${product.sellingPrice})" : "Not Displayed"}, '
+                                  'itemImage: ${product.itemImage != null && product.itemImage!.isNotEmpty ? "Displayed (${product.itemImage})" : "Not Displayed"}');
+                              final isSearchMatch = _controller.searchQuery.value.isNotEmpty &&
+                                  (product.itemName != null &&
+                                      product.itemName!.toLowerCase().replaceAll(' ', '').contains(
+                                          _controller.searchQuery.value.toLowerCase().replaceAll(' ', '')));
+                              return Card(
+                                elevation: 3,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                  side: isSearchMatch
+                                      ? BorderSide(color: Colors.green, width: 1)
+                                      : BorderSide(color: Colors.grey[300]!, width: 1),
+                                ),
+                                color: Colors.grey[200],
+                                child: Column(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    Expanded(
+                                      child: Column(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          product.itemImage != null && product.itemImage!.isNotEmpty
+                                              ? Image.network(
+                                            product.itemImage!,
+                                            height: 80,
+                                            width: 80,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) => Icon(
+                                                Icons.image_not_supported,
+                                                size: 50,
+                                                color: Colors.blueAccent),
+                                          )
+                                              : Icon(Icons.image_not_supported,
+                                              size: 50, color: Colors.blueAccent),
+                                          SizedBox(height: 8),
+                                          Text(
+                                            product.itemName ?? 'No name',
+                                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                          ),
+                                          Text(
+                                            '₹${product.sellingPrice?.toStringAsFixed(2) ?? 'N/A'}',
+                                            style: TextStyle(color: Colors.grey[700]),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 10),
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          GestureDetector(
+                                            onTap: () => _controller.decrementQuantity(originalIndex),
+                                            child: CircleAvatar(
+                                              backgroundColor: Colors.red.shade700,
+                                              radius: 14,
+                                              child: Icon(Icons.remove, color: Colors.white, size: 20),
+                                            ),
+                                          ),
+                                          SizedBox(width: 12),
+                                          Text(product.quantity.toString(), style: TextStyle(fontSize: 16)),
+                                          SizedBox(width: 12),
+                                          GestureDetector(
+                                            onTap: () => _controller.incrementQuantity(originalIndex),
+                                            child: CircleAvatar(
+                                              backgroundColor: Colors.green.shade700,
+                                              radius: 14,
+                                              child: Icon(Icons.add, color: Colors.white, size: 20),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                        )),
+                      ),
+                    ],
                   ),
                 ),
               ),
-              Expanded(
-                child: Obx(() => _controller.isLoading.value
-                    ? _buildShimmerGrid()
-                    : _controller.errorMessage.isNotEmpty
-                    ? Center(child: Text(_controller.errorMessage.value))
-                    : _controller.filteredProducts.isEmpty
-                    ? Container(
-                  color: Colors.white,
-                  child: Center(
-                    child: Container(
-                      height: double.infinity,
-                      width: double.infinity,
-                      child: Lottie.asset('assets/No Data found.json'),
-                    ),
-                  ),
-                )
-                    : Scrollbar(
-                  thumbVisibility: true,
-                  radius: Radius.circular(10),
-                  thickness: 6,
-                  child: GridView.builder(
-                    padding: EdgeInsets.all(7),
-                    gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      childAspectRatio: 0.85,
-                      crossAxisSpacing: 3,
-                      mainAxisSpacing: 3,
-                    ),
-                    itemCount: _controller.filteredProducts.length,
-                    itemBuilder: (context, index) {
-                      final product = _controller.filteredProducts[index];
-                      final originalIndex = _controller.products.indexOf(product);
-                      print('Grid Item at index $index: '
-                          'itemName: ${product.itemName != null ? "Displayed (${product.itemName})" : "Not Displayed"}, '
-                          'sellingPrice: ${product.sellingPrice != null ? "Displayed (${product.sellingPrice})" : "Not Displayed"}, '
-                          'itemImage: ${product.itemImage != null && product.itemImage!.isNotEmpty ? "Displayed (${product.itemImage})" : "Not Displayed"}');
-                      final isSearchMatch = _controller.searchQuery.value.isNotEmpty &&
-                          (product.itemName != null &&
-                              product.itemName!.toLowerCase().replaceAll(' ', '').contains(
-                                  _controller.searchQuery.value.toLowerCase().replaceAll(' ', '')));
-                      return Card(
-                        elevation: 3,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                          side: isSearchMatch
-                              ? BorderSide(color: Colors.green, width: 1)
-                              : BorderSide(color: Colors.grey[300]!, width: 1),
-                        ),
-                        color: Colors.grey[200],
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  product.itemImage != null && product.itemImage!.isNotEmpty
-                                      ? Image.network(
-                                    product.itemImage!,
-                                    height: 80,
-                                    width: 80,
-                                    fit: BoxFit.cover,
-                                    errorBuilder: (context, error, stackTrace) =>
-                                        Icon(Icons.image_not_supported, size: 50, color: Colors.blueAccent),
-                                  )
-                                      : Icon(Icons.image_not_supported, size: 50, color: Colors.blueAccent),
-                                  SizedBox(height: 8),
-                                  Text(
-                                    product.itemName ?? 'No name',
-                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                                  ),
-                                  Text(
-                                    '₹${product.sellingPrice?.toStringAsFixed(2) ?? 'N/A'}',
-                                    style: TextStyle(color: Colors.grey[700]),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.only(bottom: 10),
-                              child: Row(
-                                mainAxisAlignment: MainAxisAlignment.center,
-                                children: [
-                                  GestureDetector(
-                                    onTap: () => _controller.decrementQuantity(originalIndex),
-                                    child: CircleAvatar(
-                                      backgroundColor: Colors.red.shade700,
-                                      radius: 14,
-                                      child: Icon(Icons.remove, color: Colors.white, size: 20),
-                                    ),
-                                  ),
-                                  SizedBox(width: 12),
-                                  Text(product.quantity.toString(), style: TextStyle(fontSize: 16)),
-                                  SizedBox(width: 12),
-                                  GestureDetector(
-                                    onTap: () => _controller.incrementQuantity(originalIndex),
-                                    child: CircleAvatar(
-                                      backgroundColor: Colors.green.shade700,
-                                      radius: 14,
-                                      child: Icon(Icons.add, color: Colors.white, size: 20),
-                                    ),
-                                  ),
-                                ],
-                              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                child: Obx(() {
+                  if (_controller.cartItemCount.value > 0) {
+                    final cartTotal = _controller.cartItems.fold(
+                      0.0,
+                          (sum, p) => sum + ((p.sellingPrice ?? 0.0) * p.quantity),
+                    );
+                    final printController = Get.find<PrintController>();
+                    return Builder(
+                      builder: (context) => Container(
+                        height: 107,
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.orangeAccent,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            topRight: Radius.circular(20),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 10,
+                              offset: Offset(0, -2),
                             ),
                           ],
                         ),
-                      );
-                    },
-                  ),
-                )),
-              ),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  void _showCartBottomSheet(BuildContext context) async {
-    await _controller.fetchCartItems(); // Fetch latest cart items from API
-    setState(() {
-      _isBottomSheetVisible = true;
-    });
-
-    _bottomSheetController = showBottomSheet(
-      context: context,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.35,
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black26,
-                blurRadius: 10,
-                offset: Offset(0, -2),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Container(
-                margin: EdgeInsets.symmetric(vertical: 10),
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(
-                  color: Colors.grey[400],
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.symmetric(horizontal: 16),
-                child: Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        SizedBox(
-                          width: 70,
-                          height: 70,
-                          child: Lottie.asset('assets/Shopping Cart.json'),
-                        ),
-                        SizedBox(width: 12),
-                        Text(
-                          'Cart Items',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orangeAccent.shade700,
-                          ),
-                        ),
-                      ],
-                    ),
-                    CircleAvatar(
-                      backgroundColor: Colors.cyanAccent.withOpacity(0.3),
-                      child: IconButton(
-                        icon: const Icon(Icons.close, color: Colors.grey),
-                        onPressed: () {
-                          _bottomSheetController?.close();
-                          setState(() {
-                            _isBottomSheetVisible = false;
-                          });
-                        },
-                        tooltip: 'Close Cart',
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Expanded(
-                child: Obx(() {
-                  final cartTotal = _controller.cartItems.fold(
-                    0.0,
-                        (sum, p) => sum + ((p.sellingPrice ?? 0.0) * p.quantity),
-                  );
-                  return ListView(
-                    children: [
-                      ..._controller.cartItems.asMap().entries.map((entry) {
-                        final product = entry.value;
-                        final originalIndex = _controller.products.indexWhere((p) => p.productId == product.productId);
-                        return Slidable(
-                          key: ValueKey(product),
-                          startActionPane: ActionPane(
-                            motion: const ScrollMotion(),
-                            children: [
-                              SlidableAction(
-                                onPressed: (context) {
-                                  if (originalIndex != -1) {
-                                    _controller.removeItemFromCart(originalIndex);
-                                  }
-                                  Get.snackbar(
-                                    'Removed',
-                                    '${product.itemName} removed from cart',
-                                    snackPosition: SnackPosition.BOTTOM,
-                                  );
-                                },
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                icon: Icons.delete,
-                                label: 'Delete',
-                              ),
-                            ],
-                          ),
-                          endActionPane: ActionPane(
-                            motion: const ScrollMotion(),
-                            children: [
-                              SlidableAction(
-                                onPressed: (context) {
-                                  if (originalIndex != -1) {
-                                    _controller.removeItemFromCart(originalIndex);
-                                  }
-                                  Get.snackbar(
-                                    'Removed',
-                                    '${product.itemName} removed from cart',
-                                    snackPosition: SnackPosition.BOTTOM,
-                                  );
-                                },
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                icon: Icons.delete,
-                                label: 'Delete',
-                              ),
-                            ],
-                          ),
-                          child: ListTile(
-                            leading: CircleAvatar(
-                              radius: 20,
-                              backgroundColor: Colors.blueAccent.withOpacity(0.1),
-                              child: product.itemImage != null && product.itemImage!.isNotEmpty
-                                  ? ClipOval(
-                                child: Image.network(
-                                  product.itemImage!,
-                                  width: 40,
-                                  height: 40,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (context, error, stackTrace) =>
-                                      Icon(Icons.image, color: Colors.blueAccent),
-                                ),
-                              )
-                                  : Icon(Icons.image, color: Colors.blueAccent),
-                            ),
-                            title: Text(product.itemName ?? 'No name'),
-                            subtitle: Text(
-                              '₹${product.sellingPrice?.toStringAsFixed(2) ?? 'N/A'} x ${product.quantity} = ₹${((product.sellingPrice ?? 0.0) * product.quantity).toStringAsFixed(2)}',
-                            ),
-                            trailing: Row(
-                              mainAxisSize: MainAxisSize.min,
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                GestureDetector(
-                                  onTap: () {
-                                    if (originalIndex != -1) {
-                                      _controller.decrementQuantity(originalIndex);
-                                    }
-                                  },
-                                  child: CircleAvatar(
-                                    backgroundColor: Colors.red.shade700,
-                                    radius: 14,
-                                    child: Icon(Icons.remove, color: Colors.white, size: 20),
+                                Expanded(
+                                  child: Text(
+                                    'Items: ${_controller.cartItemCount.value}',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
                                   ),
                                 ),
-                                SizedBox(width: 12),
-                                Text(product.quantity.toString()),
-                                SizedBox(width: 12),
-                                GestureDetector(
-                                  onTap: () {
-                                    if (originalIndex != -1) {
-                                      _controller.incrementQuantity(originalIndex);
-                                    }
-                                  },
-                                  child: CircleAvatar(
-                                    backgroundColor: Colors.green.shade700,
-                                    radius: 14,
-                                    child: Icon(Icons.add, color: Colors.white, size: 20),
+                                Expanded(
+                                  child: Text(
+                                    'Total: ₹${cartTotal.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                    textAlign: TextAlign.end,
                                   ),
                                 ),
                               ],
                             ),
-                          ),
-                        );
-                      }).toList(),
-                      Divider(),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Total Amount',
-                              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-                            ),
-                            Text(
-                              '₹${cartTotal.toStringAsFixed(2)}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
-                                color: Colors.orangeAccent.shade700,
-                              ),
+                            SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () async {
+                                      await printController.syncCartData(_controller); // Sync with API
+                                      Get.to(() => PrintScreen(
+                                        initialProducts: _controller.cartItems.toList(),
+                                        initialTotal: cartTotal,
+                                        businessId: widget.businessId,
+                                      ));
+                                    },
+                                    child: Text(
+                                      'Preview & Print',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blueAccent,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: EdgeInsets.symmetric(horizontal: 8),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () async {
+                                      await printController.syncCartData(_controller); // Sync with API
+                                      await printController.fetchSystemSettings();
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (dialogContext) => Dialog(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                          ),
+                                          insetPadding: EdgeInsets.only(top: 100),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                            child: Scaffold(
+                                              body: Column(
+                                                children: [
+                                                  Obx(() {
+                                                    final printer = printController.selectedPrinter.value;
+                                                    if (printer == null) {
+                                                      return const SizedBox.shrink();
+                                                    }
+                                                    return FutureBuilder<bool>(
+                                                      future: FlutterBluetoothPrinter.connect(printer.address),
+                                                      builder: (context, snapshot) {
+                                                        bool isConnected = snapshot.data ?? false;
+                                                        return Padding(
+                                                          padding: const EdgeInsets.all(8.0),
+                                                          child: Row(
+                                                            children: [
+                                                              SizedBox(
+                                                                height: 40,
+                                                                width: 40,
+                                                                child: Lottie.asset(
+                                                                  isConnected ? 'assets/active.json' : 'assets/inactive.json',
+                                                                  fit: BoxFit.contain,
+                                                                ),
+                                                              ),
+                                                              const SizedBox(width: 10),
+                                                              Expanded(
+                                                                child: Text(
+                                                                  'Selected Printer: ${printer.name ?? printer.address}',
+                                                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        );
+                                                      },
+                                                    );
+                                                  }),
+                                                  Obx(() {
+                                                    if (printController.isLoadingSettings.value) {
+                                                      return const Padding(
+                                                        padding: EdgeInsets.all(16.0),
+                                                        child: Center(child: CircularProgressIndicator()),
+                                                      );
+                                                    }
+                                                    if (printController.errorMessage.value.isNotEmpty) {
+                                                      return Padding(
+                                                        padding: const EdgeInsets.all(16.0),
+                                                        child: Center(
+                                                          child: Column(
+                                                            children: [
+                                                              Text(
+                                                                'Error: ${printController.errorMessage.value}',
+                                                                style: const TextStyle(color: Colors.red),
+                                                              ),
+                                                              ElevatedButton(
+                                                                onPressed: printController.fetchSystemSettings,
+                                                                child: const Text('Retry'),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }
+                                                    return const SizedBox.shrink();
+                                                  }),
+                                                  Expanded(
+                                                    child: Obx(() {
+                                                      final settings = printController.systemSettings.value;
+                                                      final cartItems = _controller.cartItems; // Use cartItems directly for API quantities
+                                                      if (settings == null) {
+                                                        return const Center(child: Text('Loading receipt data...'));
+                                                      }
+                                                      return Receipt(
+                                                        builder: (context) {
+                                                          var now = DateTime.now();
+                                                          var formatter = DateFormat('dd/MM/yyyy hh:mm:ss a');
+                                                          String formattedDate = formatter.format(now);
+                                                          double discountAmt =
+                                                          (printController.totalAmount.value * 0.1).ceilToDouble();
+                                                          double grandAmt = printController.totalAmount.value - discountAmt;
+                                                          double givenAmount = 700.00;
+                                                          double returnAmount = givenAmount - grandAmt;
+
+                                                          List<String> splitText(String text, int maxLength) {
+                                                            List<String> lines = [];
+                                                            if (text.length <= maxLength) {
+                                                              lines.add(text);
+                                                              return lines;
+                                                            }
+                                                            while (text.isNotEmpty) {
+                                                              if (text.length <= maxLength) {
+                                                                lines.add(text);
+                                                                break;
+                                                              }
+                                                              int splitIndex = text.substring(0, maxLength).lastIndexOf(' ');
+                                                              if (splitIndex == -1 || splitIndex < maxLength ~/ 2) {
+                                                                splitIndex = maxLength;
+                                                              }
+                                                              lines.add(text.substring(0, splitIndex));
+                                                              text = text.substring(splitIndex).trim();
+                                                            }
+                                                            return lines;
+                                                          }
+
+                                                          return Column(
+                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                            children: [
+                                                              Center(
+                                                                child: Text(
+                                                                  settings.firmName,
+                                                                  style: GoogleFonts.merriweather(
+                                                                    fontSize: 22,
+                                                                    fontWeight: FontWeight.bold,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(height: 5),
+                                                              Center(
+                                                                child: Text(
+                                                                  'CONTACT : ${settings.firmContact1} ${settings.firmContact2}',
+                                                                  style:
+                                                                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(height: 5),
+                                                              Center(
+                                                                child: Text(
+                                                                  settings.billAddress,
+                                                                  style: GoogleFonts.merriweather(
+                                                                    fontSize: 18,
+                                                                    fontWeight: FontWeight.bold,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(height: 5),
+                                                              Center(
+                                                                child: Text(
+                                                                  'GSTIN : ${settings.billGstinNum}',
+                                                                  style: const TextStyle(fontSize: 15),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(height: 10),
+                                                              Row(
+                                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                children: [
+                                                                  Obx(() => Text(
+                                                                    'INVOICE ID : ${_controller.finalInvoiceId.value}',
+                                                                    style: TextStyle(fontSize: 17),
+                                                                  )),
+                                                                  /*Obx(() => Text(
+                                                                    _controller.finalInvoiceId.value, // Dynamic final_invoice_id
+                                                                    style: TextStyle(fontSize: 17),
+                                                                  )),*/
+                                                                ],
+                                                              ),
+                                                              const SizedBox(height: 6),
+                                                              Text('DATE: $formattedDate', style: TextStyle(fontSize: 17)),
+                                                              const SizedBox(height: 6),
+                                                              Obx(() {
+                                                                final customerName = _controller.customerName.value;
+                                                                final nameLines = splitText(customerName, 20);
+                                                                return Column(
+                                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                                  children: nameLines.map((line) => Text(
+                                                                    nameLines.first == line ? 'CUSTOMER NAME : $line' : line,
+                                                                    style: const TextStyle(fontSize: 16),
+                                                                  )).toList(),
+                                                                );
+                                                              }),
+                                                              const SizedBox(height: 6),
+                                                              Obx(() => Text(
+                                                                'MOBILE : ${_controller.customerMobileNumber.value}',
+                                                                style: const TextStyle(fontSize: 17),
+                                                              )),
+                                                              const SizedBox(height: 10),
+                                                              Row(
+                                                                children: const [
+                                                                  Expanded(
+                                                                    flex: 1,
+                                                                    child: Text(
+                                                                      '#',
+                                                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                                                                    ),
+                                                                  ),
+                                                                  Expanded(
+                                                                    flex: 5,
+                                                                    child: Text(
+                                                                      'ITEMS',
+                                                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                                                                    ),
+                                                                  ),
+                                                                  Expanded(
+                                                                    flex: 4,
+                                                                    child: Text(
+                                                                      'AMOUNT',
+                                                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                                                                    ),
+                                                                  ),
+                                                                  Expanded(
+                                                                    flex: 2,
+                                                                    child: Text(
+                                                                      'QTY',
+                                                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                                                                    ),
+                                                                  ),
+                                                                  Expanded(
+                                                                    flex: 3,
+                                                                    child: Text(
+                                                                      'TOTAL',
+                                                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const Divider(color: Colors.black),
+                                                              ...cartItems.asMap().entries.expand((entry) {
+                                                                int idx = entry.key;
+                                                                Product product = entry.value;
+                                                                double itemTotal = (product.sellingPrice ?? 0) * product.quantity;
+                                                                final itemName = product.itemName ?? 'Unknown';
+                                                                final itemNameLines = splitText(itemName, 20);
+                                                                return itemNameLines.asMap().entries.map((lineEntry) {
+                                                                  int lineIdx = lineEntry.key;
+                                                                  String line = lineEntry.value;
+                                                                  return Row(
+                                                                    children: [
+                                                                      Expanded(
+                                                                        flex: 1,
+                                                                        child: Text(
+                                                                          lineIdx == 0 ? '${idx + 1}' : '',
+                                                                          style:
+                                                                          const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                                        ),
+                                                                      ),
+                                                                      Expanded(
+                                                                        flex: 5,
+                                                                        child: Text(
+                                                                          line,
+                                                                          style:
+                                                                          const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                                        ),
+                                                                      ),
+                                                                      Expanded(
+                                                                        flex: 4,
+                                                                        child: Text(
+                                                                          lineIdx == 0
+                                                                              ? '${(product.sellingPrice ?? 0).toStringAsFixed(2)}(1Kg)'
+                                                                              : '',
+                                                                          style:
+                                                                          const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                                        ),
+                                                                      ),
+                                                                      Expanded(
+                                                                        flex: 2,
+                                                                        child: Text(
+                                                                          lineIdx == 0 ? 'x${product.quantity}' : '',
+                                                                          style:
+                                                                          const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                                        ),
+                                                                      ),
+                                                                      Expanded(
+                                                                        flex: 3,
+                                                                        child: Text(
+                                                                          lineIdx == 0 ? itemTotal.toStringAsFixed(2) : '',
+                                                                          style:
+                                                                          const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  );
+                                                                });
+                                                              }),
+                                                              const Divider(color: Colors.black),
+                                                              const SizedBox(height: 10),
+                                                              const Text('Total', style: TextStyle(fontSize: 19)),
+                                                              Row(
+                                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                children: [
+                                                                  const Text('General Items:', style: TextStyle(fontSize: 16)),
+                                                                  Text(
+                                                                    '${cartItems.length}',
+                                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                                  ),
+                                                                  const Text(
+                                                                    'TOTAL:',
+                                                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 19),
+                                                                  ),
+                                                                  Text(
+                                                                    printController.totalAmount.value.toStringAsFixed(2),
+                                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const SizedBox(height: 0),
+                                                              const Divider(color: Colors.black),
+                                                              Row(
+                                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                children: [
+                                                                  const Text('DISCOUNT (10%):', style: TextStyle(fontSize: 16)),
+                                                                  Text(
+                                                                    discountAmt.toStringAsFixed(2),
+                                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const Divider(color: Colors.black),
+                                                              const SizedBox(height: 5),
+                                                              Row(
+                                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                children: [
+                                                                  const Text(
+                                                                    'Grand Total:',
+                                                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 19),
+                                                                  ),
+                                                                  Text(
+                                                                    grandAmt.toStringAsFixed(2),
+                                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 19),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const SizedBox(height: 5),
+                                                              Row(
+                                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                children: [
+                                                                  const Text('Given Amount:', style: TextStyle(fontSize: 16)),
+                                                                  Text(
+                                                                    givenAmount.toStringAsFixed(2),
+                                                                    style: const TextStyle(fontSize: 16),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const SizedBox(height: 5),
+                                                              Row(
+                                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                children: [
+                                                                  const Text('RETURN Amount:', style: TextStyle(fontSize: 16)),
+                                                                  Text(
+                                                                    returnAmount.toStringAsFixed(2),
+                                                                    style: const TextStyle(fontSize: 15),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const SizedBox(height: 10),
+                                                              const Center(
+                                                                child: Text(
+                                                                  'Thank You.. Visit Again..!',
+                                                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(height: 5),
+                                                            ],
+                                                          );
+                                                        },
+                                                        onInitialized: (controller) {
+                                                          printController.setReceiptController(controller);
+                                                          WidgetsBinding.instance.addPostFrameCallback((_) async {
+                                                            await printController.printReceipt(dialogContext, _controller);
+                                                            // Update product list after printing
+                                                            await _controller.fetchProducts();
+                                                          });
+                                                        },
+                                                      );
+                                                    }),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Text(
+                                      'Print',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: EdgeInsets.symmetric(horizontal: 8),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () async {
+                                      await printController.selectBluetoothDevice(context);
+                                      Get.snackbar(
+                                        'Printer Selected',
+                                        'Printer selection updated',
+                                        snackPosition: SnackPosition.BOTTOM,
+                                      );
+                                    },
+                                    child: Text(
+                                      'Select Device',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.grey,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: EdgeInsets.symmetric(horizontal: 8),
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
                           ],
                         ),
                       ),
-                      Padding(
-                        padding: EdgeInsets.all(16),
-                        child: ElevatedButton(
-                          onPressed: cartTotal > 0
-                              ? () {
-                            Navigator.pop(context); // Close bottomSheet
-                            setState(() {
-                              _isBottomSheetVisible = false;
-                            });
-                            Get.to(() => PrintScreen(
-                                selectedProducts: _controller.cartItems.toList(),
-                                totalAmount: cartTotal,
-                                businessId:widget.businessId
-                            ));
-                            Get.snackbar(
-                              'Checkout',
-                              'Proceeding to checkout....',
-                              snackPosition: SnackPosition.BOTTOM,
-                            );
-                          }
-                              : null,
-                          child: Text(
-                            'Checkout',
-                            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                          ),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueAccent,
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(vertical: 12),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  );
+                    );
+                  }
+                  return SizedBox.shrink();
                 }),
               ),
-            ],
+            )
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildShimmerGrid() {
+    return GridView.builder(
+      padding: EdgeInsets.all(12),
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        childAspectRatio: 0.85,
+        crossAxisSpacing: 3,
+        mainAxisSpacing: 3,
+      ),
+      itemCount: 6,
+      itemBuilder: (context, index) {
+        return Shimmer.fromColors(
+          baseColor: Colors.grey[300]!,
+          highlightColor: Colors.grey[100]!,
+          child: Card(
+            elevation: 3,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+              side: BorderSide(color: Colors.grey[300]!, width: 1),
+            ),
+            color: Colors.grey[200],
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Container(
+                        width: 80,
+                        height: 80,
+                        color: Colors.white,
+                      ),
+                      SizedBox(height: 8),
+                      Container(
+                        width: 100,
+                        height: 16,
+                        color: Colors.white,
+                      ),
+                      SizedBox(height: 8),
+                      Container(
+                        width: 60,
+                        height: 14,
+                        color: Colors.white,
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      CircleAvatar(
+                        backgroundColor: Colors.white,
+                        radius: 14,
+                      ),
+                      SizedBox(width: 12),
+                      Container(
+                        width: 20,
+                        height: 16,
+                        color: Colors.white,
+                      ),
+                      SizedBox(width: 12),
+                      CircleAvatar(
+                        backgroundColor: Colors.white,
+                        radius: 14,
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
           ),
         );
       },
     );
+  }
+}*/
+import 'package:flutter/material.dart';
+import 'package:flutter_animate/flutter_animate.dart';
+import 'package:get/get.dart';
+import 'package:lottie/lottie.dart';
+import 'package:shimmer/shimmer.dart';
+import 'package:flutter/cupertino.dart';
+import 'package:task/profile/views/profile_page.dart';
+import 'package:task/print/views/print_screen.dart';
+import '../../print/controller/print_controller.dart';
+import '../controller/controller.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:intl/intl.dart';
+import 'package:flutter_bluetooth_printer/flutter_bluetooth_printer_library.dart';
+import '../model/product_model.dart';
 
-    _bottomSheetController!.closed.then((_) {
-      setState(() {
-        _isBottomSheetVisible = false;
-      });
+class HomeScreen extends StatefulWidget {
+  final String name;
+  final String username;
+  final String mobileNumber;
+  final String businessId;
+  final String role;
+  final String user_id;
+
+  const HomeScreen({
+    Key? key,
+    required this.name,
+    required this.username,
+    required this.mobileNumber,
+    required this.businessId,
+    required this.role,
+    required this.user_id,
+  }) : super(key: key);
+
+  @override
+  State<HomeScreen> createState() => _HomeScreenState();
+}
+
+class _HomeScreenState extends State<HomeScreen> with SingleTickerProviderStateMixin {
+  late final ProductController _controller;
+  AnimationController? _animationController;
+  Animation<double>? _fadeAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final printController = Get.find<PrintController>();
+      printController.initializePrinterConnection(context);
     });
+    Get.put(PrintController(
+      initialProducts: [],
+      initialTotal: 0.0,
+      businessId: widget.businessId,
+    ));
+    _controller = Get.put(ProductController(
+      businessId: widget.businessId,
+      billerId: widget.user_id,
+    ));
+    _animationController = AnimationController(
+      vsync: this,
+      duration: Duration(milliseconds: 300),
+    );
+    _fadeAnimation = CurvedAnimation(parent: _animationController!, curve: Curves.easeInOut);
   }
 
+  @override
+  void dispose() {
+    _animationController?.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ScaffoldMessenger(
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text('Hello ${widget.name}.', style: TextStyle(fontWeight: FontWeight.w600)),
+          leading: IconButton(
+            onPressed: () {
+              Get.to(() => ProfilePage(
+                businessId: widget.businessId,
+                user_id: widget.user_id,
+                role: widget.role,
+              ));
+            },
+            icon: Icon(CupertinoIcons.profile_circled, size: 30, color: Colors.blueGrey.shade900),
+          ),
+          backgroundColor: Colors.green.withOpacity(0.6),
+          actions: [
+            IconButton(onPressed: _controller.fetchProducts, icon: Icon(Icons.sync)),
+          ],
+        ),
+        body: Stack(
+          children: [
+            Container(
+              //color: Colors.orange.withOpacity(0.4),
+              child: GestureDetector(
+                onTap: () => FocusScope.of(context).unfocus(),
+                child: SafeArea(
+                  child: Column(
+                    children: [
+                      Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: TextField(
+                          onChanged: (value) => _controller.filterProducts(value),
+                          decoration: InputDecoration(
+                            hintText: 'Search products...',
+                            prefixIcon: Icon(Icons.search),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.blueAccent),
+                            ),
+                            focusedBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(color: Colors.blue, width: 2),
+                            ),
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Obx(() => _controller.isLoading.value
+                            ? _buildShimmerGrid()
+                            : _controller.errorMessage.isNotEmpty
+                            ? Center(child: Text(_controller.errorMessage.value))
+                            : _controller.filteredProducts.isEmpty
+                            ? Container(
+                          color: Colors.white,
+                          child: Center(
+                            child: Container(
+                              height: double.infinity,
+                              width: double.infinity,
+                              child: Lottie.asset('assets/No Data found.json'),
+                            ),
+                          ),
+                        )
+                            : Scrollbar(
+                          thumbVisibility: true,
+                          radius: Radius.circular(10),
+                          thickness: 6,
+                          child: Obx(() {
+                            final grouped = _controller.productsGroupedByCategory;
+
+                            return ListView.builder(
+                              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 7),
+                              itemCount: grouped.length,
+                              itemBuilder: (context, categoryIndex) {
+                                final category = grouped.keys.elementAt(categoryIndex);
+                                final products = grouped[category]!;
+
+                                return Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+                                      child: Text(
+                                        category,
+                                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                      ),
+                                    ),
+                                    GridView.builder(
+                                      shrinkWrap: true,
+                                      physics: NeverScrollableScrollPhysics(),
+                                      itemCount: products.length,
+                                      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+                                        crossAxisCount: 2,
+                                        childAspectRatio: 0.85,
+                                        crossAxisSpacing: 3,
+                                        mainAxisSpacing: 3,
+                                      ),
+                                      itemBuilder: (context, index) {
+                                        final product = products[index];
+                                        final originalIndex = _controller.products.indexOf(product);
+                                        final isSearchMatch = _controller.searchQuery.value.isNotEmpty &&
+                                            (product.itemName != null &&
+                                                product.itemName!.toLowerCase().replaceAll(' ', '').contains(
+                                                    _controller.searchQuery.value.toLowerCase().replaceAll(' ', '')));
+
+                                        return buildProductCard(product, originalIndex, isSearchMatch);
+                                      },
+                                    ),
+                                  ],
+                                );
+                              },
+                            );
+                          })
+                        )),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            Positioned(
+              left: 0,
+              right: 0,
+              bottom: 0,
+              child: SafeArea(
+                child: Obx(() {
+                  if (_controller.cartItemCount.value > 0) {
+                    final cartTotal = _controller.cartItems.fold(
+                      0.0,
+                          (sum, p) => sum + ((p.sellingPrice ?? 0.0) * p.quantity),
+                    );
+                    final printController = Get.find<PrintController>();
+                    return Builder(
+                      builder: (context) => Container(
+                        height: 107,
+                        padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.orangeAccent,
+                          borderRadius: BorderRadius.only(
+                            topLeft: Radius.circular(20),
+                            topRight: Radius.circular(20),
+                          ),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black26,
+                              blurRadius: 10,
+                              offset: Offset(0, -2),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          children: [
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: Text(
+                                    'Items: ${_controller.cartItemCount.value}',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                  ),
+                                ),
+                                Expanded(
+                                  child: Text(
+                                    'Total: ₹${cartTotal.toStringAsFixed(2)}',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.white,
+                                    ),
+                                    textAlign: TextAlign.end,
+                                  ),
+                                ),
+                              ],
+                            ),
+                            SizedBox(height: 8),
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () async {
+                                      await printController.syncCartData(_controller);
+                                      Get.to(() => PrintScreen(
+                                        initialProducts: _controller.cartItems.toList(),
+                                        initialTotal: cartTotal,
+                                        businessId: widget.businessId,
+                                      ));
+                                    },
+                                    child: Text(
+                                      'Preview & Print',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.blueAccent,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: EdgeInsets.symmetric(horizontal: 8),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () async {
+                                      await printController.syncCartData(_controller);
+                                      await printController.fetchSystemSettings();
+                                      showDialog(
+                                        context: context,
+                                        barrierDismissible: false,
+                                        builder: (dialogContext) => Dialog(
+                                          shape: RoundedRectangleBorder(
+                                            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                          ),
+                                          insetPadding: EdgeInsets.only(top: 100),
+                                          child: ClipRRect(
+                                            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                                            child: Scaffold(
+                                              body: Column(
+                                                children: [
+                                                  Obx(() {
+                                                    final printer = printController.selectedPrinter.value;
+                                                    if (printer == null) {
+                                                      return const SizedBox.shrink();
+                                                    }
+                                                    return FutureBuilder<bool>(
+                                                      future: FlutterBluetoothPrinter.connect(printer.address),
+                                                      builder: (context, snapshot) {
+                                                        bool isConnected = snapshot.data ?? false;
+                                                        return Padding(
+                                                          padding: const EdgeInsets.all(8.0),
+                                                          child: Row(
+                                                            children: [
+                                                              SizedBox(
+                                                                height: 40,
+                                                                width: 40,
+                                                                child: Lottie.asset(
+                                                                  isConnected ? 'assets/active.json' : 'assets/inactive.json',
+                                                                  fit: BoxFit.contain,
+                                                                ),
+                                                              ),
+                                                              const SizedBox(width: 10),
+                                                              Expanded(
+                                                                child: Text(
+                                                                  'Selected Printer: ${printer.name ?? printer.address}',
+                                                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        );
+                                                      },
+                                                    );
+                                                  }),
+                                                  Obx(() {
+                                                    if (printController.isLoadingSettings.value) {
+                                                      return const Padding(
+                                                        padding: EdgeInsets.all(16.0),
+                                                        child: Center(child: CircularProgressIndicator()),
+                                                      );
+                                                    }
+                                                    if (printController.errorMessage.value.isNotEmpty) {
+                                                      return Padding(
+                                                        padding: const EdgeInsets.all(16.0),
+                                                        child: Center(
+                                                          child: Column(
+                                                            children: [
+                                                              Text(
+                                                                'Error: ${printController.errorMessage.value}',
+                                                                style: const TextStyle(color: Colors.red),
+                                                              ),
+                                                              ElevatedButton(
+                                                                onPressed: printController.fetchSystemSettings,
+                                                                child: const Text('Retry'),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }
+                                                    return const SizedBox.shrink();
+                                                  }),
+                                                  Expanded(
+                                                    child: Obx(() {
+                                                      final settings = printController.systemSettings.value;
+                                                      final cartItems = _controller.cartItems;
+                                                      if (settings == null) {
+                                                        return const Center(child: Text('Loading receipt data...'));
+                                                      }
+                                                      return Receipt(
+                                                        builder: (context) {
+                                                          var now = DateTime.now();
+                                                          var formatter = DateFormat('dd/MM/yyyy hh:mm:ss a');
+                                                          String formattedDate = formatter.format(now);
+                                                          double discountAmt =
+                                                          (printController.totalAmount.value * 0.1).ceilToDouble();
+                                                          double grandAmt = printController.totalAmount.value - discountAmt;
+                                                          double givenAmount = 700.00;
+                                                          double returnAmount = givenAmount - grandAmt;
+
+                                                          List<String> splitText(String text, int maxLength) {
+                                                            List<String> lines = [];
+                                                            if (text.length <= maxLength) {
+                                                              lines.add(text);
+                                                              return lines;
+                                                            }
+                                                            while (text.isNotEmpty) {
+                                                              if (text.length <= maxLength) {
+                                                                lines.add(text);
+                                                                break;
+                                                              }
+                                                              int splitIndex = text.substring(0, maxLength).lastIndexOf(' ');
+                                                              if (splitIndex == -1 || splitIndex < maxLength ~/ 2) {
+                                                                splitIndex = maxLength;
+                                                              }
+                                                              lines.add(text.substring(0, splitIndex));
+                                                              text = text.substring(splitIndex).trim();
+                                                            }
+                                                            return lines;
+                                                          }
+
+                                                          return Column(
+                                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                                            children: [
+                                                              Center(
+                                                                child: Text(
+                                                                  settings.firmName,
+                                                                  style: GoogleFonts.merriweather(
+                                                                    fontSize: 22,
+                                                                    fontWeight: FontWeight.bold,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(height: 5),
+                                                              Center(
+                                                                child: Text(
+                                                                  'CONTACT : ${settings.firmContact1} ${settings.firmContact2}',
+                                                                  style:
+                                                                  const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(height: 5),
+                                                              Center(
+                                                                child: Text(
+                                                                  settings.billAddress,
+                                                                  style: GoogleFonts.merriweather(
+                                                                    fontSize: 18,
+                                                                    fontWeight: FontWeight.bold,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(height: 5),
+                                                              Center(
+                                                                child: Text(
+                                                                  'GSTIN : ${settings.billGstinNum}',
+                                                                  style: const TextStyle(fontSize: 15),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(height: 10),
+                                                              Row(
+                                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                children: [
+                                                                  Obx(() => Text(
+                                                                    'INVOICE ID : ${_controller.finalInvoiceId.value}',
+                                                                    style: TextStyle(fontSize: 17),
+                                                                  )),
+                                                                ],
+                                                              ),
+                                                              const SizedBox(height: 6),
+                                                              Text('DATE: $formattedDate', style: TextStyle(fontSize: 17)),
+                                                              const SizedBox(height: 6),
+                                                              Obx(() {
+                                                                final customerName = _controller.customerName.value;
+                                                                final nameLines = splitText(customerName, 20);
+                                                                return Column(
+                                                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                                                  children: nameLines.map((line) => Text(
+                                                                    nameLines.first == line ? 'CUSTOMER NAME : $line' : line,
+                                                                    style: const TextStyle(fontSize: 16),
+                                                                  )).toList(),
+                                                                );
+                                                              }),
+                                                              const SizedBox(height: 6),
+                                                              Obx(() => Text(
+                                                                'MOBILE : ${_controller.customerMobileNumber.value}',
+                                                                style: const TextStyle(fontSize: 17),
+                                                              )),
+                                                              const SizedBox(height: 10),
+                                                              Row(
+                                                                children: const [
+                                                                  Expanded(
+                                                                    flex: 1,
+                                                                    child: Text(
+                                                                      '#',
+                                                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                                                                    ),
+                                                                  ),
+                                                                  Expanded(
+                                                                    flex: 5,
+                                                                    child: Text(
+                                                                      'ITEMS',
+                                                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                                                                    ),
+                                                                  ),
+                                                                  Expanded(
+                                                                    flex: 4,
+                                                                    child: Text(
+                                                                      'AMOUNT',
+                                                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                                                                    ),
+                                                                  ),
+                                                                  Expanded(
+                                                                    flex: 2,
+                                                                    child: Text(
+                                                                      'QTY',
+                                                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                                                                    ),
+                                                                  ),
+                                                                  Expanded(
+                                                                    flex: 3,
+                                                                    child: Text(
+                                                                      'TOTAL',
+                                                                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 17),
+                                                                    ),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const Divider(color: Colors.black),
+                                                              ...cartItems.asMap().entries.expand((entry) {
+                                                                int idx = entry.key;
+                                                                Product product = entry.value;
+                                                                double itemTotal = (product.sellingPrice ?? 0) * product.quantity;
+                                                                final itemName = product.itemName ?? 'Unknown';
+                                                                final itemNameLines = splitText(itemName, 20);
+                                                                return itemNameLines.asMap().entries.map((lineEntry) {
+                                                                  int lineIdx = lineEntry.key;
+                                                                  String line = lineEntry.value;
+                                                                  return Row(
+                                                                    children: [
+                                                                      Expanded(
+                                                                        flex: 1,
+                                                                        child: Text(
+                                                                          lineIdx == 0 ? '${idx + 1}' : '',
+                                                                          style:
+                                                                          const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                                        ),
+                                                                      ),
+                                                                      Expanded(
+                                                                        flex: 5,
+                                                                        child: Text(
+                                                                          line,
+                                                                          style:
+                                                                          const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                                        ),
+                                                                      ),
+                                                                      Expanded(
+                                                                        flex: 4,
+                                                                        child: Text(
+                                                                          lineIdx == 0
+                                                                              ? '${(product.sellingPrice ?? 0).toStringAsFixed(2)}(1Kg)'
+                                                                              : '',
+                                                                          style:
+                                                                          const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                                        ),
+                                                                      ),
+                                                                      Expanded(
+                                                                        flex: 2,
+                                                                        child: Text(
+                                                                          lineIdx == 0 ? 'x${product.quantity}' : '',
+                                                                          style:
+                                                                          const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                                        ),
+                                                                      ),
+                                                                      Expanded(
+                                                                        flex: 3,
+                                                                        child: Text(
+                                                                          lineIdx == 0 ? itemTotal.toStringAsFixed(2) : '',
+                                                                          style:
+                                                                          const TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                                                                        ),
+                                                                      ),
+                                                                    ],
+                                                                  );
+                                                                });
+                                                              }),
+                                                              const Divider(color: Colors.black),
+                                                              const SizedBox(height: 10),
+                                                              const Text('Total', style: TextStyle(fontSize: 19)),
+                                                              Row(
+                                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                children: [
+                                                                  const Text('General Items:', style: TextStyle(fontSize: 16)),
+                                                                  Text(
+                                                                    '${cartItems.length}',
+                                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                                  ),
+                                                                  const Text(
+                                                                    'TOTAL:',
+                                                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 19),
+                                                                  ),
+                                                                  Text(
+                                                                    printController.totalAmount.value.toStringAsFixed(2),
+                                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const SizedBox(height: 0),
+                                                              const Divider(color: Colors.black),
+                                                              Row(
+                                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                children: [
+                                                                  const Text('DISCOUNT (10%):', style: TextStyle(fontSize: 16)),
+                                                                  Text(
+                                                                    discountAmt.toStringAsFixed(2),
+                                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const Divider(color: Colors.black),
+                                                              const SizedBox(height: 5),
+                                                              Row(
+                                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                children: [
+                                                                  const Text(
+                                                                    'Grand Total:',
+                                                                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 19),
+                                                                  ),
+                                                                  Text(
+                                                                    grandAmt.toStringAsFixed(2),
+                                                                    style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 19),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const SizedBox(height: 5),
+                                                              Row(
+                                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                children: [
+                                                                  const Text('Given Amount:', style: TextStyle(fontSize: 16)),
+                                                                  Text(
+                                                                    givenAmount.toStringAsFixed(2),
+                                                                    style: const TextStyle(fontSize: 16),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const SizedBox(height: 5),
+                                                              Row(
+                                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                                children: [
+                                                                  const Text('RETURN Amount:', style: TextStyle(fontSize: 16)),
+                                                                  Text(
+                                                                    returnAmount.toStringAsFixed(2),
+                                                                    style: const TextStyle(fontSize: 15),
+                                                                  ),
+                                                                ],
+                                                              ),
+                                                              const SizedBox(height: 10),
+                                                              const Center(
+                                                                child: Text(
+                                                                  'Thank You.. Visit Again..!',
+                                                                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 22),
+                                                                ),
+                                                              ),
+                                                              const SizedBox(height: 5),
+                                                            ],
+                                                          );
+                                                        },
+                                                        onInitialized: (controller) {
+                                                          printController.setReceiptController(controller);
+                                                          WidgetsBinding.instance.addPostFrameCallback((_) async {
+                                                            await printController.printReceipt(dialogContext, _controller);
+                                                            _controller.resetUICart(); // Reset UI cart after printing
+                                                          });
+                                                        },
+                                                      );
+                                                    }),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                      );
+                                    },
+                                    child: Text(
+                                      'Print',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: EdgeInsets.symmetric(horizontal: 8),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton(
+                                    onPressed: () async {
+                                      await printController.selectBluetoothDevice(context);
+                                      Get.snackbar(
+                                        'Printer Selected',
+                                        'Printer selection updated',
+                                        snackPosition: SnackPosition.BOTTOM,
+                                      );
+                                    },
+                                    child: Text(
+                                      'Select Device',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.grey,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(10),
+                                      ),
+                                      padding: EdgeInsets.symmetric(horizontal: 8),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }
+                  return SizedBox.shrink();
+                }),
+              ),
+            )
+          ],
+        ),
+      ),
+    );
+  }
+  Widget buildProductCard(Product product, int originalIndex, bool isSearchMatch) {
+    return Card(
+      elevation: 3,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+        side: isSearchMatch
+            ? BorderSide(color: Colors.green, width: 1)
+            : BorderSide(color: Colors.grey[300]!, width: 1),
+      ),
+      color: Colors.grey[200],
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          // Badge
+          Container(
+            width: double.infinity,
+            padding: EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+            decoration: BoxDecoration(
+              color: Colors.green.shade700,
+              borderRadius: BorderRadius.only(
+                topLeft: Radius.circular(12),
+                topRight: Radius.circular(12),
+              ),
+            ),
+            child: Text(
+              product.availabilityStatus ?? 'Not mentioned',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: 14,
+              ),
+              textAlign: TextAlign.center,
+            ).animate(onPlay: (controller) => controller.repeat()).shimmer(
+              duration: 2000.ms,
+              color: Colors.black,
+            ),
+          ),
+
+          Expanded(
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                product.itemImage != null && product.itemImage!.isNotEmpty
+                    ? Image.network(
+                  product.itemImage!,
+                  height: 80,
+                  width: 80,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) => Icon(
+                    Icons.image_not_supported,
+                    size: 50,
+                    color: Colors.blueAccent,
+                  ),
+                )
+                    : Icon(Icons.image_not_supported, size: 50, color: Colors.blueAccent),
+                SizedBox(height: 8),
+                Text(
+                  product.itemName ?? 'No name',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                Text(
+                  product.productCategory ?? 'Not mentioned',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '₹${product.sellingPrice?.toStringAsFixed(2) ?? 'N/A'} ',
+                      style: TextStyle(color: Colors.grey[700], fontWeight: FontWeight.bold),
+                    ),
+                    Text('(${product.sellingUnit ?? 'N/A'})', style: TextStyle(color: Colors.grey[700]))
+                  ],
+                )
+              ],
+            ),
+          ),
+
+          // Quantity controls
+          Padding(
+            padding: const EdgeInsets.only(bottom: 10),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                GestureDetector(
+                  onTap: () => _controller.decrementQuantity(originalIndex),
+                  child: CircleAvatar(
+                    backgroundColor: Colors.red.shade700,
+                    radius: 14,
+                    child: Icon(Icons.remove, color: Colors.white, size: 20),
+                  ),
+                ),
+                SizedBox(width: 12),
+                Text(product.quantity.toString(), style: TextStyle(fontSize: 16)),
+                SizedBox(width: 12),
+                GestureDetector(
+                  onTap: () => _controller.incrementQuantity(originalIndex),
+                  child: CircleAvatar(
+                    backgroundColor: Colors.green.shade700,
+                    radius: 14,
+                    child: Icon(Icons.add, color: Colors.white, size: 20),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
   Widget _buildShimmerGrid() {
     return GridView.builder(
       padding: EdgeInsets.all(12),

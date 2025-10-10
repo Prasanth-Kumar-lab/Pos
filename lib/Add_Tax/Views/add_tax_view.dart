@@ -19,6 +19,9 @@ class AddTaxView extends StatelessWidget {
     final taxPercentageController = TextEditingController();
     final businessIdController = TextEditingController(text: businessId);
 
+    // List of tax types for dropdown
+    final List<String> taxTypes = ['CGST', 'IGST', 'SGST'];
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Add Tax'),
@@ -31,8 +34,8 @@ class AddTaxView extends StatelessWidget {
             key: controller.formKey,
             child: Column(
               children: [
-                TextFormField(
-                  controller: taxTypeController,
+                DropdownButtonFormField<String>(
+                  value: null,
                   decoration: InputDecoration(
                     labelText: 'Tax type',
                     border: OutlineInputBorder(
@@ -50,9 +53,20 @@ class AddTaxView extends StatelessWidget {
                     contentPadding: const EdgeInsets.symmetric(
                         vertical: 16, horizontal: 20),
                   ),
+                  items: taxTypes.map((String taxType) {
+                    return DropdownMenuItem<String>(
+                      value: taxType,
+                      child: Text(taxType),
+                    );
+                  }).toList(),
+                  onChanged: (String? newValue) {
+                    if (newValue != null) {
+                      taxTypeController.text = newValue;
+                    }
+                  },
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a tax type';
+                    if (value == null) {
+                      return 'Please select a tax type';
                     }
                     return null;
                   },
@@ -84,34 +98,6 @@ class AddTaxView extends StatelessWidget {
                     }
                     if (double.tryParse(value) == null) {
                       return 'Please enter a valid number';
-                    }
-                    return null;
-                  },
-                ),
-                const SizedBox(height: 10),
-                TextFormField(
-                  controller: businessIdController,
-                  decoration: InputDecoration(
-                    labelText: 'Business ID',
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    enabledBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: BorderSide(color: Colors.grey.shade400),
-                    ),
-                    focusedBorder: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(30),
-                      borderSide: const BorderSide(color: Colors.orange, width: 2),
-                    ),
-                    prefixIcon: const Icon(Icons.business_center_outlined),
-                    contentPadding: const EdgeInsets.symmetric(
-                        vertical: 16, horizontal: 20),
-                  ),
-                  readOnly: true,
-                  validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return 'Please enter a business ID';
                     }
                     return null;
                   },

@@ -52,7 +52,8 @@ class _AddBillerScreenState extends State<AddBillerScreen> {
                   children: [
                     const SizedBox(height: 40),
                     const Text(
-                      'Create Account For Biller',textAlign: TextAlign.center,
+                      'Create Account For Biller',
+                      textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
@@ -117,7 +118,7 @@ class _AddBillerScreenState extends State<AddBillerScreen> {
                       },
                     )),
                     const SizedBox(height: 16),
-                    CustomTextField(
+                    /*CustomTextField(
                       controller: controller.aadharNumberController,
                       label: 'Aadhar Number',
                       icon: Icons.badge_outlined,
@@ -131,7 +132,7 @@ class _AddBillerScreenState extends State<AddBillerScreen> {
                         }
                         return null;
                       },
-                    ),
+                    ),*/
                     const SizedBox(height: 16),
                     CustomTextField(
                       controller: controller.addressController,
@@ -139,22 +140,6 @@ class _AddBillerScreenState extends State<AddBillerScreen> {
                       icon: Icons.location_on_outlined,
                       validator: (value) =>
                       value == null || value.isEmpty ? 'Please enter your address' : null,
-                    ),
-                    const SizedBox(height: 16),
-                    TextFormField(
-                      controller: controller.businessIdController,
-                      decoration: InputDecoration(
-                        labelText: 'Business ID',
-                        prefixIcon: Icon(Icons.business_outlined),
-                        border: OutlineInputBorder(),
-                      ),
-                      readOnly: true,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Business ID is required';
-                        }
-                        return null;
-                      },
                     ),
                     const SizedBox(height: 24),
                     Obx(() => CustomButton(

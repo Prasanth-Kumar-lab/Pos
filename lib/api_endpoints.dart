@@ -49,5 +49,6 @@ static const String ordersEndPoint = 'https://erpapp.in/mart_print/mart_print_ap
   static const String deleteProductEndPoint = 'https://erpapp.in/mart_print/mart_print_apis/delete_products_api.php';
   static const String listSystemSettingsEndPoint = 'https://erpapp.in/mart_print/mart_print_apis/list_system_seetings_api.php';
   static const String systemSettingsEndPoint='https://erpapp.in/mart_print/mart_print_apis/system_settings_api.php';
+  static const String orderCompleteEndPoint = 'https://erpapp.in/mart_print/mart_print_apis/order_complete.php';
 
 }

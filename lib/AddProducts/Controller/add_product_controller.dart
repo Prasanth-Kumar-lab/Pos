@@ -40,11 +40,11 @@ class AddProductsController extends GetxController {
             .toList();
       } else {
         print('Failed to fetch categories: ${response.statusCode}');
-        Get.snackbar('Error', 'Failed to fetch categories');
+        //Get.snackbar('Error', 'Please add categories');
       }
     } catch (e) {
       print('Error fetching categories: Please ask admin to add');
-      Get.snackbar('Error', 'Error fetching categories: $e');
+      //Get.snackbar('Error', 'Error fetching categories. please add categories to select ');//$e
     }
   }
 
@@ -73,11 +73,11 @@ class AddProductsController extends GetxController {
             .toList();
       } else {
         print('Failed to fetch taxes: ${response.statusCode}');
-        Get.snackbar('Error', 'Failed to fetch taxes');
+        //Get.snackbar('Error', 'Failed to fetch taxes please add taxes in profile');
       }
     } catch (e) {
       print('Error fetching taxes: Please ask admin to add');
-      Get.snackbar('Error', 'Error fetching taxes: $e');
+      //Get.snackbar('Error', 'Error fetching taxes: Please add taxes in profile');//$e
     }
   }
 
@@ -88,9 +88,14 @@ class AddProductsController extends GetxController {
       return;
     }
 
-    final url = Uri.parse('${ApiConstants.productsEndPoint}?business_id=$businessId');
+    final url = Uri.parse('${ApiConstants.productsEndPoint}');
     try {
-      final response = await http.get(url);
+      final response = await http.post(
+        url,
+        body: {
+          'business_id': businessId,
+        },
+      );
       if (response.statusCode == 200) {
         final List<dynamic> jsonList = jsonDecode(response.body);
         products.value = jsonList
@@ -98,11 +103,11 @@ class AddProductsController extends GetxController {
             .toList();
       } else {
         print('Failed to fetch products: ${response.statusCode}');
-        Get.snackbar('Error', 'Failed to fetch products');
+        //Get.snackbar('Error', 'Failed to fetch products');
       }
     } catch (e) {
       print('Error fetching products: $e');
-      Get.snackbar('Error', 'Error fetching products: $e');
+      //Get.snackbar('Error', 'Error fetching products: $e');
     }
   }
 

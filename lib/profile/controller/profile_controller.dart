@@ -4,6 +4,7 @@ import 'package:http/http.dart' as http;
 import '../../api_endpoints.dart';
 import '../model/profile_model.dart';
 import 'package:flutter/material.dart';
+
 class ProfileController extends GetxController {
   var profile = Rxn<Profile>();
   final String userId;
@@ -18,6 +19,7 @@ class ProfileController extends GetxController {
     super.onInit();
     fetchProfile();
   }
+
   void togglePasswordVisibility() {
     isPasswordVisible.value = !isPasswordVisible.value;
   }
@@ -25,6 +27,7 @@ class ProfileController extends GetxController {
   void toggleEditPasswordVisibility() {
     editPasswordVisible.value = !editPasswordVisible.value;
   }
+
   Future<void> fetchProfile() async {
     final url = Uri.parse('${ApiConstants.profileEndPoint}?user_id=$userId&role=$role');
     var request = http.MultipartRequest('POST', url);
@@ -79,15 +82,16 @@ class ProfileController extends GetxController {
 
       if (response.statusCode == 200) {
         final jsonResponse = jsonDecode(response.body);
-        // Assuming the API returns a list like fetchProfile
-        if (jsonResponse is List && jsonResponse.isNotEmpty) {
-          profile.value = Profile.fromJson(jsonResponse.first);
-        } else if (jsonResponse is Map<String, dynamic>) {
-          profile.value = Profile.fromJson(jsonResponse);
-        } else {
-          Get.snackbar('Error', 'Invalid response format');
-          return;
-        }
+        // Update the profile with the new data directly
+        profile.value = Profile(
+          name: name,
+          username: username,
+          password: password ?? profile.value?.password ?? '',
+          mobileNumber: mobileNumber,
+          role: role,
+          aadharNumber: aadharNumber,
+          address: address,
+        );
         Get.snackbar(
           'Success',
           'Profile updated successfully',

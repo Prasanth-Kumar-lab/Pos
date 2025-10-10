@@ -39,7 +39,6 @@ class AddBillerController extends GetxController {
     if (formKey.currentState!.validate()) {
       isLoading.value = true;
 
-      // Construct user model
       final user = AddBillerModel(
         name: nameController.text.trim(),
         mobileNumber: mobileNumberController.text.trim(),
@@ -52,7 +51,6 @@ class AddBillerController extends GetxController {
       );
 
       try {
-        // Make API call
         final response = await http.post(
           Uri.parse(ApiConstants.signUpEndpoint),
           body: user.toJson(),
@@ -61,7 +59,7 @@ class AddBillerController extends GetxController {
         isLoading.value = false;
 
         if (response.statusCode == 200) {
-          // Enhanced snackbar for successful signup
+          // ✅ Show success message
           Get.snackbar(
             'Successful!',
             'Your biller account has been created successfully!',
@@ -73,8 +71,20 @@ class AddBillerController extends GetxController {
             icon: Icon(Icons.check_circle, color: Colors.white),
           );
 
-          // Navigate to LoginPage
-          //Get.offAll(() => LoginScreen());
+          // ✅ Reset all input fields
+          nameController.clear();
+          mobileNumberController.clear();
+          usernameController.clear();
+          passwordController.clear();
+          aadharNumberController.clear();
+          addressController.clear();
+          // Keep businessIdController as it is since it's pre-filled.
+
+          // ✅ Reset the form state
+          formKey.currentState!.reset();
+
+          // ✅ Optionally navigate back or stay on the page
+          // Get.offAll(() => LoginScreen());
         } else {
           Get.snackbar(
             'Error',
