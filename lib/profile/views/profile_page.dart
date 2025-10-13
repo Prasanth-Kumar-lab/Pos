@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../Reports/view/biller_reports_view.dart';
 import '../../login/views/login_screen.dart';
 import '../controller/profile_controller.dart';
 
@@ -25,7 +26,7 @@ class ProfilePage extends StatelessWidget {
     final mobileNumberController = TextEditingController();
     final roleController = TextEditingController();
     final addressController = TextEditingController();
-    final isEditing = false.obs; // State to toggle edit mode
+    final isEditing = false.obs;
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -55,7 +56,6 @@ class ProfilePage extends StatelessWidget {
           );
         }
         final data = controller.profile.value!;
-        // Initialize text controllers with profile data
         nameController.text = data.name ?? '';
         usernameController.text = data.username ?? '';
         passwordController.text = data.password ?? '';
@@ -73,7 +73,7 @@ class ProfilePage extends StatelessWidget {
               _buildDetailsTab(
                 data,
                 businessId,
-                user_id, // Fixed: Changed userId to user_id
+                user_id,
                 role,
                 controller,
                 nameController,
@@ -124,7 +124,7 @@ class ProfilePage extends StatelessWidget {
                         aadharNumber: '',
                         address: addressController.text,
                       );
-                      isEditing.value = false; // Exit edit mode after saving
+                      isEditing.value = false;
                       Get.snackbar(
                         'Success',
                         'Profile updated successfully',
@@ -156,9 +156,8 @@ class ProfilePage extends StatelessWidget {
       }),
       floatingActionButton: Obx(() => FloatingActionButton(
         onPressed: () {
-          isEditing.value = !isEditing.value; // Toggle edit mode
+          isEditing.value = !isEditing.value;
           if (!isEditing.value) {
-            // Reset fields to original values when canceling
             final data = controller.profile.value!;
             nameController.text = data.name ?? '';
             usernameController.text = data.username ?? '';
@@ -211,74 +210,92 @@ class ProfilePage extends StatelessWidget {
             ),
           ),
         ),
-        SizedBox(height: 8),
+        SizedBox(height: 10),
         Center(
-          child: Text(
-            data.username?.isEmpty ?? true ? '@username' : '@${data.username}',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.grey.shade600,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ),
-        SizedBox(height: 24),
-        Center(
-          child: ElevatedButton(
-            onPressed: () {
-              Get.dialog(
-                AlertDialog(
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  title: Text(
-                    'Confirm Logout',
-                    style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A2E35)),
-                  ),
-                  content: Text('Are you sure you want to log out?'),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Get.back(),
-                      child: Text('Cancel', style: TextStyle(color: Colors.grey.shade600)),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              if (role == 'Biller')
+                Padding(
+                  padding: EdgeInsets.only(right: 16),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Get.to(() => BillerReportsView(businessId: businessId, billerId: user_id));
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white,
+                      foregroundColor: Color(0xFF1A2E35),
+                      side: BorderSide(color: Color(0xFF1A2E35), width: 2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      padding: EdgeInsets.symmetric(horizontal: 32, vertical: 14),
                     ),
-                    TextButton(
-                      onPressed: () async {
-                        final prefs = await SharedPreferences.getInstance();
-                        await prefs.clear();
-                        Get.offAll(() => const LoginScreen());
-                        Get.snackbar(
-                          'Logged Out',
-                          'You have been logged out successfully.',
-                          snackPosition: SnackPosition.BOTTOM,
-                          backgroundColor: Color(0xFFE57373),
-                          colorText: Colors.white,
-                          margin: EdgeInsets.all(16),
-                          borderRadius: 12,
-                        );
-                      },
-                      child: Text(
-                        'Logout',
-                        style: TextStyle(color: Color(0xFFE57373)),
+                    child: Text(
+                      'Reports',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w600,
+                        color: Color(0xFF1A2E35),
                       ),
                     ),
-                  ],
+                  ),
                 ),
-                barrierDismissible: false,
-              );
-            },
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.white,
-              foregroundColor: Color(0xFFE57373),
-              side: BorderSide(color: Color(0xFFE57373), width: 2),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-              padding: EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-            ),
-            child: Text(
-              'Logout',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
-                color: Color(0xFFE57373),
+              ElevatedButton(
+                onPressed: () {
+                  Get.dialog(
+                    AlertDialog(
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      title: Text(
+                        'Confirm Logout',
+                        style: TextStyle(fontWeight: FontWeight.w700, color: Color(0xFF1A2E35)),
+                      ),
+                      content: Text('Are you sure you want to log out?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Get.back(),
+                          child: Text('Cancel', style: TextStyle(color: Colors.grey.shade600)),
+                        ),
+                        TextButton(
+                          onPressed: () async {
+                            final prefs = await SharedPreferences.getInstance();
+                            await prefs.clear();
+                            Get.offAll(() => const LoginScreen());
+                            Get.snackbar(
+                              'Logged Out',
+                              'You have been logged out successfully.',
+                              snackPosition: SnackPosition.BOTTOM,
+                              backgroundColor: Color(0xFFE57373),
+                              colorText: Colors.white,
+                              margin: EdgeInsets.all(16),
+                              borderRadius: 12,
+                            );
+                          },
+                          child: Text(
+                            'Logout',
+                            style: TextStyle(color: Color(0xFFE57373)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    barrierDismissible: false,
+                  );
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Color(0xFFE57373),
+                  side: BorderSide(color: Color(0xFFE57373), width: 2),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  padding: EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                ),
+                child: Text(
+                  'Logout',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFFE57373),
+                  ),
+                ),
               ),
-            ),
+            ],
           ),
         ),
         SizedBox(height: 10),
@@ -320,7 +337,9 @@ class ProfilePage extends StatelessWidget {
         _buildEditableDetailTile('Role', roleController, Icons.work, isEditing),
         _buildEditableDetailTile('Address', addressController, Icons.location_on, isEditing),
         _buildDetailTile('User ID', user_id),
-        _buildDetailTile('Business ID', businessId),
+        Padding(
+            padding: EdgeInsets.symmetric().copyWith(bottom: 70),
+            child: _buildDetailTile('Business ID', businessId)),
       ],
     );
   }

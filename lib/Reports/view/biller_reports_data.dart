@@ -1,16 +1,18 @@
-import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:get/get_core/src/get_main.dart';
+import 'package:get/get_state_manager/src/simple/get_controllers.dart';
+import 'package:flutter/material.dart';
 
-import '../controller/reports_controller.dart';
+import '../controller/biller_reports_controller.dart';
 
-class ReportDisplayView extends StatelessWidget {
+class BillerReportsDisplayView extends StatelessWidget {
   final dynamic data;
 
-  const ReportDisplayView({Key? key, required this.data}) : super(key: key);
+  const BillerReportsDisplayView({Key? key, required this.data}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    final controller = Get.put(ReportDisplayController(data: data));
+    final controller = Get.put(BillerReportsDisplayController(data: data));
 
     return Scaffold(
       backgroundColor: Colors.white,
@@ -22,7 +24,7 @@ class ReportDisplayView extends StatelessWidget {
           onPressed: () => Get.back(),
         ),
         title: const Text(
-          'Report Details',
+          'Biller Report Details',
           style: TextStyle(
             color: Colors.white,
             fontWeight: FontWeight.w600,
