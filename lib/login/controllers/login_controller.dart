@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
@@ -20,6 +21,7 @@ class LoginController extends GetxController {
     obscurePassword.value = !obscurePassword.value;
   }
 
+  /*
   Future<void> handleLogin() async {
     if (formKey.currentState!.validate()) {
       isLoading.value = true;
@@ -100,11 +102,148 @@ class LoginController extends GetxController {
         );
       }
     }
+  }*/
+  Future<void> handleLogin() async {
+    if (formKey.currentState!.validate()) {
+      isLoading.value = true;
+
+      try {
+        final response = await http.post(
+          Uri.parse(ApiConstants.loginEndpoint),
+          body: {
+            'username': usernameController.text.trim(),
+            'password': passwordController.text.trim(),
+          },
+        );
+
+        final data = jsonDecode(response.body);
+
+        isLoading.value = false;
+
+        if (data['status'] == 'Success') {
+          final String name = data['name'] ?? 'User';
+          final String mobileNumber = data['number'] ?? 'N/A';
+          final String role = data['role'] ?? 'N/A';
+          final String username = usernameController.text.trim();
+          final String businessId = data['business_id'] ?? 'Not generated';
+          final String user_id = data['id']?.toString() ?? 'N/A';
+
+          // Save user data
+          final prefs = await SharedPreferences.getInstance();
+          await prefs.setBool('isLoggedIn', true);
+          await prefs.setString('role', role);
+          await prefs.setString('name', name);
+          await prefs.setString('username', username);
+          await prefs.setString('mobileNumber', mobileNumber);
+          await prefs.setString('businessId', businessId);
+          await prefs.setString('user_id', user_id);
+
+          // Navigate based on role
+          if (role == 'Admin') {
+            Fluttertoast.showToast(
+              msg: 'Welcome $name',
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.BOTTOM,
+              backgroundColor: Colors.green.shade600,
+              textColor: Colors.white,
+            );
+            Get.offAll(() => ProfileButtons(
+              name: name,
+              username: username,
+              mobileNumber: mobileNumber,
+              businessId: businessId,
+              role: role,
+              user_id: user_id,
+            ));
+          } else if (role == 'Biller') {
+            Fluttertoast.showToast(
+              msg: 'Welcome $name',
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.BOTTOM,
+              backgroundColor: Colors.green.shade600,
+              textColor: Colors.white,
+            );
+            Get.offAll(() => HomeScreen(
+              name: name,
+              username: username,
+              mobileNumber: mobileNumber,
+              businessId: businessId,
+              role: role,
+              user_id: user_id,
+            ));
+          } else {
+            Fluttertoast.showToast(
+              msg: 'Invalid role: $role',
+              toastLength: Toast.LENGTH_SHORT,
+              gravity: ToastGravity.BOTTOM,
+              backgroundColor: Colors.red.shade600,
+              textColor: Colors.white,
+            );
+          }
+        } else {
+          // ──────── FAILED LOGIN → SHOW ALERT DIALOG ────────
+          String message = data['message'] ?? 'Login failed. Please try again.';
+
+          if (message.toLowerCase().contains('no users found') ||
+              message.toLowerCase().contains('user not found')) {
+            message = 'Please check the details and login again';
+          } else if (message.toLowerCase().contains('password')) {
+            message = 'Please check the details and login again';
+          }
+
+          Get.dialog(
+            AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              title: const Row(
+                children: [
+                  Icon(Icons.error_outline, color: Colors.red),
+                  SizedBox(width: 10),
+                  Text('Login Failed'),
+                ],
+              ),
+              content: Text(
+                message,
+                style: const TextStyle(fontSize: 16),
+                textAlign: TextAlign.center,
+              ),
+              actions: [
+                /*TextButton(
+                  onPressed: () => Get.back(), // Close dialog
+                  child: const Text(
+                    'OK',
+                    style: TextStyle(color: Colors.blue, fontWeight: FontWeight.bold),
+                  ),
+                ),*/
+              ],
+            ),
+            barrierDismissible: true,
+          );
+        }
+      } catch (e) {
+        isLoading.value = false;
+        Get.dialog(
+          AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            title: const Text('Error'),
+            content: const Text(
+                'Unable to connect to server. Please check your internet connection.'),
+            actions: [],
+          ),
+        );
+      }
+    }
   }
 
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.clear();
+    // Clear only user-specific keys, preserve printer settings
+    await prefs.remove('isLoggedIn');
+    await prefs.remove('role');
+    await prefs.remove('name');
+    await prefs.remove('username');
+    await prefs.remove('mobileNumber');
+    await prefs.remove('businessId');
+    await prefs.remove('user_id');
     Get.offAllNamed('/login');
   }
 

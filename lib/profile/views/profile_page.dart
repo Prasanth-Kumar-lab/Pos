@@ -35,12 +35,12 @@ class ProfilePage extends StatelessWidget {
         elevation: 0,
         leading: IconButton(
           icon: Icon(Icons.arrow_back_ios, color: Colors.black),
-          onPressed: () => Get.back(),
+            onPressed: () => Navigator.pop(context),
         ),
         title: Text(
           'Profile',
           style: TextStyle(
-            color: Colors.white,
+            color: Colors.black,
             fontWeight: FontWeight.w600,
             fontSize: 20,
           ),
@@ -248,13 +248,23 @@ class ProfilePage extends StatelessWidget {
                   content: Text('Are you sure you want to log out?'),
                   actions: [
                     TextButton(
-                      onPressed: () => Get.back(),
-                      child: Text('Cancel', style: TextStyle(color: Colors.grey.shade600)),
+                      onPressed: () => Navigator.pop(context),
+                      child: Text(
+                        'Cancel',
+                        style: TextStyle(color: Colors.grey.shade600),
+                      ),
                     ),
                     TextButton(
                       onPressed: () async {
                         final prefs = await SharedPreferences.getInstance();
-                        await prefs.clear();
+                        // Clear only user-specific keys, preserve printer settings
+                        await prefs.remove('isLoggedIn');
+                        await prefs.remove('role');
+                        await prefs.remove('name');
+                        await prefs.remove('username');
+                        await prefs.remove('mobileNumber');
+                        await prefs.remove('businessId');
+                        await prefs.remove('user_id');
                         Get.offAll(() => const LoginScreen());
                         Get.snackbar(
                           'Logged Out',
@@ -273,7 +283,7 @@ class ProfilePage extends StatelessWidget {
                     ),
                   ],
                 ),
-                barrierDismissible: false,
+                barrierDismissible: true,
               );
             },
             style: ElevatedButton.styleFrom(
@@ -389,134 +399,162 @@ class ProfilePage extends StatelessWidget {
       IconData icon,
       RxBool isEditing, {
         TextInputType? keyboardType,
-        bool readOnly = false, // <-- Add this line
+        bool readOnly = false,
       }) {
     return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
+      margin: const EdgeInsets.only(bottom: 16),
       child: isEditing.value
           ? TextField(
         controller: controller,
         keyboardType: keyboardType,
-        readOnly: readOnly, // <-- Apply readOnly here
+        readOnly: readOnly,
+        style: const TextStyle(fontSize: 16, color: Colors.black),
         decoration: InputDecoration(
           labelText: label,
-          prefixIcon: Icon(icon, color: Color(0xFF1A2E35)),
-          border: InputBorder.none,
           labelStyle: TextStyle(color: Colors.grey.shade600),
-        ),
-        style: TextStyle(
-          fontSize: 16,
-          color: Colors.black,
+          prefixIcon: Icon(icon, color: const Color(0xFF1A2E35)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.black),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Colors.black, width: 1.5),
+          ),
         ),
       )
-          : Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1A2E35),
-            ),
-          ),
-          Flexible(
-            child: Text(
-              controller.text.isEmpty ? 'Not Provided' : controller.text,
-              textAlign: TextAlign.right,
-              overflow: TextOverflow.ellipsis,
-              maxLines: 2,
-              style: TextStyle(
+          : Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade50,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            Text(
+              label,
+              style: const TextStyle(
                 fontSize: 16,
-                color: Colors.black,
+                fontWeight: FontWeight.w600,
+                color: Color(0xFF1A2E35),
               ),
             ),
-          ),
-        ],
+            Flexible(
+              child: Text(
+                controller.text.isEmpty ? 'Not Provided' : controller.text,
+                textAlign: TextAlign.right,
+                overflow: TextOverflow.ellipsis,
+                maxLines: 2,
+                style: TextStyle(
+                  fontSize: 16,
+                  color: Colors.black,
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
-
-
-  Widget _buildPasswordTile(ProfileController controller, TextEditingController passwordController, RxBool isEditing) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 16),
-      padding: EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey.shade200),
-      ),
-      child: isEditing.value
-          ? Obx(() => TextField(
-        controller: passwordController,
-        obscureText: !controller.isPasswordVisible.value,
-        decoration: InputDecoration(
-          labelText: 'Password (min 8 characters)',
-          prefixIcon: Icon(Icons.lock, color: Color(0xFF1A2E35)),
-          border: InputBorder.none,
-          labelStyle: TextStyle(color: Colors.grey.shade600),
-          suffixIcon: IconButton(
-            icon: Icon(
-              controller.isPasswordVisible.value ? Icons.visibility_off : Icons.visibility,
-              color: Color(0xFFF4C430),
+  Widget _buildPasswordTile(
+      ProfileController controller,
+      TextEditingController passwordController,
+      RxBool isEditing,
+      ) {
+    return Padding(
+        padding: const EdgeInsets.only(bottom: 16),
+        child: isEditing.value
+            ? Obx(() => TextField(
+          controller: passwordController,
+          obscureText: !controller.isPasswordVisible.value,
+          decoration: InputDecoration(
+            labelText: 'Password (min 8 characters)',
+            prefixIcon: const Icon(Icons.lock, color: Color(0xFF1A2E35)),
+            labelStyle: TextStyle(color: Colors.grey.shade600),
+            suffixIcon: IconButton(
+              icon: Icon(
+                controller.isPasswordVisible.value
+                    ? Icons.visibility_off
+                    : Icons.visibility,
+                color: const Color(0xFFF4C430),
+              ),
+              onPressed: controller.togglePasswordVisibility,
             ),
-            onPressed: controller.togglePasswordVisibility,
-          ),
-        ),
-        style: TextStyle(
-          fontSize: 16,
-          color: Colors.grey.shade600,
-          fontFamily: controller.isPasswordVisible.value ? null : 'monospace',
-        ),
-      ))
-          : Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            'Password',
-            style: TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: Color(0xFF1A2E35),
+            contentPadding: const EdgeInsets.symmetric(
+                horizontal: 16, vertical: 14),
+            enabledBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(color: Colors.black),
+            ),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide:
+              const BorderSide(color: Colors.black, width: 1.5),
             ),
           ),
-          Flexible(
-            child: Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Obx(() => Text(
-                  passwordController.text.isEmpty
-                      ? 'Not Set'
-                      : (controller.isPasswordVisible.value ? passwordController.text : '********'),
-                  textAlign: TextAlign.right,
-                  overflow: TextOverflow.ellipsis,
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.black,
-                    fontFamily: controller.isPasswordVisible.value ? null : 'monospace',
-                  ),
-                )),
-                if (passwordController.text.isNotEmpty)
-                  Obx(() => IconButton(
-                    icon: Icon(
-                      controller.isPasswordVisible.value ? Icons.visibility_off : Icons.visibility,
-                      color: Color(0xFFF4C430),
-                      size: 20,
-                    ),
-                    onPressed: controller.togglePasswordVisibility,
-                  )),
-              ],
-            ),
+          style: TextStyle(
+            fontSize: 16,
+            color: Colors.grey.shade800,
+            fontFamily:
+            controller.isPasswordVisible.value ? null : 'monospace',
           ),
-        ],
-      ),
+        ))
+            : Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const Text(
+                'Password',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1A2E35),
+                ),
+              ),
+              Flexible(
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Obx(() => Text(
+                      passwordController.text.isEmpty
+                          ? 'Not Set'
+                          : (controller.isPasswordVisible.value
+                          ? passwordController.text
+                          : '********'),
+                      textAlign: TextAlign.right,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: 16,
+                        color: Colors.black,
+                        fontFamily: controller.isPasswordVisible.value ? null : 'monospace',
+                      ),
+                    )),
+                    if (passwordController.text.isNotEmpty)
+                      Obx(() => IconButton(
+                        icon: Icon(
+                          controller.isPasswordVisible.value
+                              ? Icons.visibility_off
+                              : Icons.visibility,
+                          color: Color(0xFFF4C430),
+                          size: 20,
+                        ),
+                        onPressed: controller.togglePasswordVisibility,
+                      )),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        )
     );
   }
 }

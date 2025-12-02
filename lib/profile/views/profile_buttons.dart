@@ -6,10 +6,10 @@ import 'package:task/AddBiller/views/add_biller_screen.dart';
 import 'package:task/AddCategory/views/add_category_views.dart';
 import 'package:task/AddProducts/Views/add-products_view.dart';
 import 'package:task/Add_Tax/Views/add_tax_view.dart';
-import 'package:task/BillersList/view/billers_view.dart';
 import 'package:task/Reports/view/reports_view.dart';
 import 'package:task/login/views/login_screen.dart';
 import '../../AddSystemSettings/view/system_settings_view.dart';
+import '../../BillersListStatus/view/billers_view.dart';
 import 'profile_page.dart';
 import '../widgets/profile_action_button.dart';
 
@@ -137,7 +137,7 @@ class ProfileButtons extends StatelessWidget {
                   Get.to(() => AddBillerScreen(businessId: businessId));
                   break;
                 case 'Add System Settings':
-                  Get.to(() => AddSystemSettingsView(), arguments: {'businessId': businessId});
+                  Get.to(() => SystemSettingsView(), arguments: {'businessId': businessId});
                   break;
                 case 'Day Reports':
                   Get.to(() => ReportsView(businessId: businessId), arguments: {'reportType': 'Day Report'});

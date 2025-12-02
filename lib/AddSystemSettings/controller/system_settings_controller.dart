@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
-
+import 'package:image_picker/image_picker.dart';
 import '../model/system_settings_model.dart';
 
 class SystemSettingsController extends GetxController {
@@ -13,9 +14,10 @@ class SystemSettingsController extends GetxController {
   final TextEditingController billAddressController = TextEditingController();
   final TextEditingController billGstinNumController = TextEditingController();
   final TextEditingController businessIdController = TextEditingController();
-
   final RxBool isLoading = false.obs;
   final Rx<Map<String, dynamic>?> savedData = Rx<Map<String, dynamic>?>(null);
+  final ImagePicker _picker = ImagePicker();
+  final RxString selectedImagePath = ''.obs;
 
   @override
   void onInit() {
@@ -38,7 +40,30 @@ class SystemSettingsController extends GetxController {
     businessIdController.dispose();
     super.onClose();
   }
+  Future<void> pickImage() async {
+    try {
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: 800,
+        maxHeight: 800,
+        imageQuality: 85,
+      );
 
+      if (pickedFile != null) {
+        selectedImagePath.value = pickedFile.path;
+        fileController.text = pickedFile.path.split('/').last; // Show filename only
+      }
+    } catch (e) {
+      Fluttertoast.showToast(
+        msg: "Failed to pick image: $e",
+        backgroundColor: Colors.red.shade600,
+      );
+    }
+  }
+  void clearImage() {
+    selectedImagePath.value = '';
+    fileController.clear();
+  }
   String? validateField(String? value, String fieldName) {
     if (value == null || value.isEmpty) {
       return 'Please enter $fieldName';
@@ -46,6 +71,7 @@ class SystemSettingsController extends GetxController {
     return null;
   }
 
+  /*
   Future<void> saveSystemSettings(GlobalKey<FormState> formKey) async {
     if (!formKey.currentState!.validate()) return;
 
@@ -87,6 +113,52 @@ class SystemSettingsController extends GetxController {
         snackPosition: SnackPosition.BOTTOM,
         backgroundColor: Colors.red.shade600,
         colorText: Colors.white,
+      );
+    }
+  }*/
+  Future<void> saveSystemSettings(GlobalKey<FormState> formKey) async {
+    if (!formKey.currentState!.validate()) return;
+
+    isLoading.value = true;
+
+    final model = SystemSettingsModel(
+      billPrefix: billPrefixController.text,
+      quote: quoteController.text,
+      firmName: firmNameController.text,
+      firmContact1: firmContact1Controller.text,
+      firmContact2: firmContact2Controller.text,
+      file: selectedImagePath.value.isNotEmpty
+          ? selectedImagePath.value.split('/').last
+          : fileController.text, // fallback to old path
+      billAddress: billAddressController.text,
+      billGstinNum: billGstinNumController.text,
+      businessId: businessIdController.text,
+    );
+
+    // Pass the actual file path for upload
+    final result = await model.saveSettings(
+      selectedImagePath: selectedImagePath.value,
+    );
+
+    isLoading.value = false;
+
+    if (result['status'] == 'success') {
+      savedData.value = result['data'];
+
+      // Optionally refresh settings after save
+      // You might want to refetch from server to get updated logo URL
+
+      Fluttertoast.showToast(
+        msg: result['message'] ?? 'Settings saved successfully!',
+        backgroundColor: Colors.green.shade600,
+      );
+
+      // Clear selected image after successful upload (optional)
+      // clearImage();
+    } else {
+      Fluttertoast.showToast(
+        msg: result['message'] ?? 'Failed to save settings',
+        backgroundColor: Colors.red.shade600,
       );
     }
   }

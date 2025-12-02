@@ -1,3 +1,4 @@
+/*
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -104,4 +105,140 @@ class AddCategoryView extends StatelessWidget {
       ),
     );
   }
+}*/
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import '../controller/add_category_controller.dart';
+import '../model/add_category_model.dart';
+
+class AddCategoryView extends StatelessWidget {
+  final String businessId;
+
+  const AddCategoryView({super.key, required this.businessId});
+
+  @override
+  Widget build(BuildContext context) {
+    // Initialize controller with businessId
+    final AddCategoryController controller =
+    Get.put(AddCategoryController(businessId: businessId));
+
+    final categoryNameController = TextEditingController();
+
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Categories'),
+          bottom: const TabBar(
+            tabs: [
+              /// 🔹 TAB ORDER CHANGED (Add Category first)
+              Tab(text: 'Add Category'),
+              Tab(text: 'List Categories'),
+            ],
+          ),
+        ),
+        body: TabBarView(
+          children: [
+
+            // ---------------- ADD CATEGORY TAB (FIRST) ----------------
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Form(
+                key: controller.formKey,
+                child: Column(
+                  children: [
+                    TextFormField(
+                      controller: categoryNameController,
+                      decoration: InputDecoration(
+                        labelText: 'Category name',
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(30),
+                        ),
+                        prefixIcon: const Icon(Icons.category),
+                      ),
+                      validator: (value) {
+                        if (value == null || value.isEmpty) {
+                          return 'Please enter a category name';
+                        }
+                        return null;
+                      },
+                    ),
+
+                    const SizedBox(height: 20),
+
+                    Obx(() => controller.isLoading.value
+                        ? const CircularProgressIndicator()
+                        : ElevatedButton(
+                      onPressed: () async {
+                        if (controller.formKey.currentState!.validate()) {
+                          final category = CategoryModel(
+                            categoryName: categoryNameController.text,
+                            businessId: businessId,
+                          );
+                          await controller.addCategory(category);
+
+                          if (controller.responseStatus.value == 'Success') {
+                            Get.snackbar(
+                              'Success',
+                              controller.responseMessage.value,
+                              backgroundColor: Colors.green,
+                              colorText: Colors.white,
+                              snackPosition: SnackPosition.BOTTOM,
+                            );
+
+                            categoryNameController.clear();
+                            await controller.fetchCategories(); // refresh list
+                          } else {
+                            Get.snackbar(
+                              'Error',
+                              controller.responseMessage.value.isNotEmpty
+                                  ? controller.responseMessage.value
+                                  : 'Failed to add category',
+                              backgroundColor: Colors.red,
+                              colorText: Colors.white,
+                              snackPosition: SnackPosition.BOTTOM,
+                            );
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.orange.shade700,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: const Text('Add Category'),
+                    )),
+                  ],
+                ),
+              ),
+            ),
+
+            // ---------------- LIST CATEGORIES TAB (SECOND) ----------------
+            Obx(() {
+              if (controller.categories.isEmpty) {
+                controller.fetchCategories();
+                return const Center(child: CircularProgressIndicator());
+              } else {
+                return ListView.builder(
+                  itemCount: controller.categories.length,
+                  itemBuilder: (context, index) {
+                    final category = controller.categories[index];
+                    return ListTile(
+                      leading: Text(
+                        '${index + 1}.  ${category.categoryName}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
+                      ),
+                    );
+                  },
+                );
+              }
+            }),
+          ],
+        ),
+      ),
+    );
+  }
 }
+

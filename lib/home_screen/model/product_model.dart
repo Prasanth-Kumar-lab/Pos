@@ -8,6 +8,7 @@ class Product {
   String? sellingUnit; // Added to store selling_unit from JSON
   String? availabilityStatus;
   String? productCategory;
+  String? finalInvoiceId;
 
   Product({
     this.itemName,
@@ -18,7 +19,8 @@ class Product {
     this.quantity = 0,
     this.sellingUnit, // Added as an optional parameter
     this.availabilityStatus,
-    this.productCategory
+    this.productCategory,
+    this.finalInvoiceId
   });
 
   factory Product.fromJson(Map<String, dynamic> json) {
@@ -45,6 +47,7 @@ class Product {
       sellingUnit: json['selling_unit']?.toString(), // Added to parse selling_unit
       availabilityStatus: json['availability_status'].toString(),
       productCategory: json['product_cat'].toString(),
+      finalInvoiceId: json['final_invoice_id'].toString(),
     );
   }
 }

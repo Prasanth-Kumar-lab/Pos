@@ -6,8 +6,6 @@ class Printer {
 
   Printer({required this.address, this.name});
 }
-
-
 class SystemSettings {
   final String quoteId;
   final String billPrefix;
@@ -16,8 +14,7 @@ class SystemSettings {
   final String firmContact2;
   final String billAddress;
   final String billGstinNum;
-  final String billLogo; // URL or path to logo (can be used for image printing if needed)
-
+  final String billLogo; // dynamic logo
   SystemSettings({
     required this.quoteId,
     required this.billPrefix,

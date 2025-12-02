@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:task/Constants/constants.dart';
 
 class CustomTextField extends StatelessWidget {
   final TextEditingController controller;
@@ -64,8 +65,8 @@ class CustomButton extends StatelessWidget {
     return ElevatedButton(
       onPressed: isLoading ? null : onPressed,
       style: ElevatedButton.styleFrom(
-        foregroundColor: Colors.white,
-        backgroundColor: Colors.blue.shade700,
+        foregroundColor: TextColors.buttonTextColor,
+        backgroundColor: TextColors.buttonBackgroundColor.shade700,
         minimumSize: const Size(double.infinity, 50),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
@@ -77,7 +78,7 @@ class CustomButton extends StatelessWidget {
         height: 24,
         width: 24,
         child: CircularProgressIndicator(
-          color: Colors.white,
+          color: TextColors.circularProgressIndicatorColor,
           strokeWidth: 2,
         ),
       )

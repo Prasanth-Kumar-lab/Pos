@@ -1,6 +1,5 @@
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
 import 'package:task/api_endpoints.dart';
 
 class SystemSettingsModel {
@@ -40,52 +39,71 @@ class SystemSettingsModel {
   };
 
   // API call to save system settings
-  Future<Map<String, dynamic>> saveSettings() async {
+  // API call to save system settings with image upload
+  Future<Map<String, dynamic>> saveSettings({
+    required String selectedImagePath, // Pass the actual file path
+  }) async {
     try {
       var request = http.MultipartRequest(
         'POST',
         Uri.parse(ApiConstants.systemSettingsEndPoint),
       );
 
-      // Add form-data fields
+      // Add all text fields
       request.fields.addAll(toJson());
 
-      final response = await request.send();
-      final responseBody = await http.Response.fromStream(response);
+      // Only add file if a new image was picked
+      if (selectedImagePath.isNotEmpty) {
+        var file = await http.MultipartFile.fromPath(
+          'file', // This must match the exact field name your backend expects (e.g., 'file', 'logo', 'bill_logo')
+          selectedImagePath,
+          filename: selectedImagePath.split('/').last,
+        );
+        request.files.add(file);
+        print('Image attached: ${selectedImagePath.split('/').last}');
+      } else {
+        // Optional: Send old logo path or empty if no new image
+        // Some backends allow keeping old image if no new one sent
+        request.fields['file'] = file; // keep existing filename/path
+      }
 
-      // Debug: Log raw response
-      print('API Raw Response Body: ${responseBody.body}');
-      print('API Status Code: ${response.statusCode}');
+      print('Request Fields:57 ${request.fields}');
+      print('Request Files: ${request.files.length}');
 
-      if (response.statusCode == 200) {
-        final responseData = jsonDecode(responseBody.body);
-        final status = responseData['status'].toString().toLowerCase(); // Case-insensitive check
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
 
-        // Debug: Log parsed status
-        print('Parsed Status (lowercase): $status');
+      print('API Raw Response: ${response.body}');
+      print('Status Code: ${response.statusCode}');
+
+      if (response.statusCode == 200 || response.statusCode == 201) {
+        final responseData = jsonDecode(response.body);
+
+        final status = (responseData['status'] ?? '').toString().toLowerCase();
 
         if (status == 'success' || status == 'updated') {
           return {
             'status': 'success',
-            'message': responseData['message'] ?? 'System settings updated successfully',
-            'data': responseData['data'] ?? toJson(), // Use API data if provided, else form data
+            'message': responseData['message'] ?? 'Settings saved successfully',
+            'data': responseData['data'] ?? {},
           };
         } else {
           return {
             'status': 'error',
-            'message': responseData['message'] ?? 'Unexpected status: ${responseData['status']}. Failed to save settings.',
+            'message': responseData['message'] ?? 'Failed to save settings',
           };
         }
       } else {
         return {
           'status': 'error',
-          'message': 'Failed to save settings: ${response.statusCode}',
+          'message': 'Server error: ${response.statusCode}',
         };
       }
     } catch (e) {
+      print('Exception during save: $e');
       return {
         'status': 'error',
-        'message': 'An error occurred: $e',
+        'message': 'Network or file error: $e',
       };
     }
   }

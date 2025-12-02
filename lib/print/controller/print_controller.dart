@@ -382,7 +382,6 @@ class PrintController extends GetxController {
       errorMessage.value = 'Business ID is missing';
       return;
     }
-
     isLoadingSettings.value = true;
     errorMessage.value = '';
 
@@ -440,11 +439,10 @@ class PrintController extends GetxController {
       return false;
     }
   }
-
-  Future<void> printReceipt(BuildContext context, ProductController productController) async {
+  /*Future<void> printReceipt(BuildContext context, ProductController productController) async {
     if (selectedPrinter.value == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Please select a printer first')),
+        SnackBar(content: Text('Please select a printer first')),         //Prints only when bluetooth connected
       );
       return;
     }
@@ -479,7 +477,82 @@ class PrintController extends GetxController {
         SnackBar(content: Text('Printing failed: $e')),
       );
     }
+  }*/
+  /*Future<void> printReceipt(BuildContext context, ProductController productController) async {
+    bool printSuccess = false;
+
+    try {
+      if (selectedPrinter.value == null) {
+        log('No printer selected. Skipping print.');
+      } else {
+        await receiptController?.print(
+          address: selectedPrinter.value!.address,
+          keepConnected: true,
+          addFeeds: 4,
+        );
+        printSuccess = true;
+        log('Printing successful');
+      }
+    } catch (e) {
+      log('Printing failed: $e');
+    }
+
+    // ✔ ALWAYS CALL completeOrder — no matter what
+    final cartId = productController.cartId.value;
+    final orderCompleted = await completeOrder(cartId);
+
+    if (orderCompleted) {
+      productController.resetUICart();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            printSuccess
+                ? 'Printed & Order Completed'
+                : 'Printer not connected, but Order Completed',
+          ),
+        ),
+      );
+      Navigator.of(context).pop();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Order not completed: ${errorMessage.value}')),
+      );
+    }
+  }*/                                                                                 //YESTERDAY
+  Future<void> printReceipt(BuildContext context, ProductController productController) async {
+    bool printSuccess = false;
+
+    try {
+      if (selectedPrinter.value != null) {
+        await receiptController?.print(
+          address: selectedPrinter.value!.address,
+          keepConnected: true,
+          addFeeds: 4,
+        );
+        printSuccess = true;
+        log('Printing successful');
+      } else {
+        log('No printer selected → Skipping print (still completing order)');
+      }
+    } catch (e) {
+      log('Print failed: $e');
+    }
+
+    // Always reset UI cart after user tried to print (intent was to finish sale)
+    productController.resetUICart();
+
+    Get.snackbar(
+      'Success',
+      printSuccess
+          ? 'Printed & Order Completed'
+          : 'Order Completed (No Printer Connected)',
+      backgroundColor: printSuccess ? Colors.green : Colors.orange,
+      colorText: Colors.white,
+    );
+
+    Navigator.of(context).pop(); // Close PrintScreen
   }
+
 
   void setReceiptController(ReceiptController controller) {
     receiptController = controller;

@@ -1,6 +1,8 @@
 import 'dart:convert';
 import 'dart:io'; // Added for File handling
 import 'package:flutter/foundation.dart';
+import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:get/get.dart';
 import 'package:task/AddProducts/model/list_product_category_fetch.dart';
@@ -106,6 +108,7 @@ class AddProductsController extends GetxController {
     }
   }
 
+  /*
   Future<void> addProduct(Map<String, String> params, File? imageFile) async {
     final request = http.MultipartRequest('POST', Uri.parse(ApiConstants.addProductsEndPoint));
     params['business_id'] = businessId;
@@ -145,19 +148,22 @@ class AddProductsController extends GetxController {
       print('Error adding product: $e');
       Get.snackbar('Error', 'Error adding product: $e');
     }
-  }
-
-  Future<void> updateProduct(String productCode, Map<String, String> params, File? imageFile) async {
-    params['product_code'] = productCode;
+  }*/
+  Future<void> addProduct(Map<String, String> params, File? imageFile) async {
+    final request =
+    http.MultipartRequest('POST', Uri.parse(ApiConstants.addProductsEndPoint));
     params['business_id'] = businessId;
-    final request = http.MultipartRequest('POST', Uri.parse('${ApiConstants.updateProductsEndPoint}'));
     request.fields.addAll(params);
 
     // Add image file if provided
     if (imageFile != null) {
       final fileSize = await imageFile.length();
       if (fileSize > 500 * 1024) {
-        Get.snackbar('Error', 'Image size must be less than 500KB');
+        Fluttertoast.showToast(
+          msg: 'Image size must be less than 500KB',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+        );
         return;
       }
       request.files.add(await http.MultipartFile.fromPath(
@@ -174,18 +180,115 @@ class AddProductsController extends GetxController {
         final json = jsonDecode(response.body);
         if (json['status'] == 'Success') {
           await fetchProducts();
-          Get.snackbar('Success', 'Product updated successfully');
+          Fluttertoast.showToast(
+            msg: 'Product added successfully',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.TOP,
+          );
+        } else {
+          print('Failed to add product: ${json['message']}');
+          Fluttertoast.showToast(
+            msg: 'Failed to add product: ${json['message']}',
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.TOP,
+          );
+        }
+      } else {
+        print('Failed to add product: ${response.statusCode}');
+        Fluttertoast.showToast(
+          msg: 'Failed to add product: ${response.statusCode}',
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.TOP,
+        );
+      }
+    } catch (e) {
+      print('Error adding product: $e');
+      Fluttertoast.showToast(
+        msg: 'Error adding product: $e',
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.TOP,
+      );
+    }
+  }
+
+  Future<void> updateProduct(String productCode, Map<String, String> params, File? imageFile) async {
+    params['product_code'] = productCode;
+    params['business_id'] = businessId;
+    final request = http.MultipartRequest('POST', Uri.parse('${ApiConstants.updateProductsEndPoint}'));
+    request.fields.addAll(params);
+
+    // Add image file if provided
+    if (imageFile != null) {
+      final fileSize = await imageFile.length();
+      if (fileSize > 500 * 1024) {
+        Fluttertoast.showToast(
+          msg: "Image size must be less than 500KB",
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0,
+        );
+
+        return;
+      }
+      request.files.add(await http.MultipartFile.fromPath(
+        'item_image',
+        imageFile.path,
+      ));
+    }
+
+    try {
+      final streamedResponse = await request.send();
+      final response = await http.Response.fromStream(streamedResponse);
+
+      if (response.statusCode == 200) {
+        final json = jsonDecode(response.body);
+        if (json['status'] == 'Success') {
+          await fetchProducts();
+          Fluttertoast.showToast(
+            msg: "Success, Product updated successfully",
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 16.0,
+          );
         } else {
           print('Failed to update product: ${json['message']}');
-          Get.snackbar('Error', 'Failed to update product: ${json['message']}');
+          Fluttertoast.showToast(
+            msg: "'Error', 'Failed to update product: please check connection or enter all fields'", //${json['message']}
+            toastLength: Toast.LENGTH_SHORT,
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: Colors.red,
+            textColor: Colors.white,
+            fontSize: 16.0,
+          );
+          //Get.snackbar('Error', 'Failed to update product: ${json['message']}');
         }
       } else {
         print('Failed to update product: ${response.statusCode}');
-        Get.snackbar('Error', 'Failed to update product: ${response.statusCode}');
+        //Get.snackbar('Error', 'Failed to update product: ${response.statusCode}');
+        Fluttertoast.showToast(
+          msg: "'Error', 'Failed to update product: please check connection or enter all fields'", //${response.statusCode}
+          toastLength: Toast.LENGTH_SHORT,
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.red,
+          textColor: Colors.white,
+          fontSize: 16.0,
+        );
       }
     } catch (e) {
       print('Error updating product: $e');
-      Get.snackbar('Error', 'Error updating product: $e');
+      //Get.snackbar('Error', 'Error updating product: $e');
+      Fluttertoast.showToast(
+        msg: "'Error', 'Failed to update product: please check connection or enter all fields'", //$e
+        toastLength: Toast.LENGTH_SHORT,
+        gravity: ToastGravity.BOTTOM,
+        backgroundColor: Colors.red,
+        textColor: Colors.white,
+        fontSize: 16.0,
+      );
     }
   }
 

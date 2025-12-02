@@ -1,13 +1,13 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:get/get.dart';
 import 'package:http/http.dart' as http;
 import 'package:task/AddBiller/model/add_biller_model.dart';
 import 'package:task/api_endpoints.dart';
-import 'package:task/login/views/login_screen.dart';
 
 class AddBillerController extends GetxController {
-  final formKey = GlobalKey<FormState>();
 
+  final formKey = GlobalKey<FormState>();
   final nameController = TextEditingController();
   final mobileNumberController = TextEditingController();
   final usernameController = TextEditingController();
@@ -60,18 +60,17 @@ class AddBillerController extends GetxController {
 
         if (response.statusCode == 200) {
           // ✅ Show success message
-          Get.snackbar(
-            'Successful!',
-            'Your biller account has been created successfully!',
-            snackPosition: SnackPosition.BOTTOM,
+          Fluttertoast.showToast(
+            msg: "Your biller account has been created successfully!",
+            toastLength: Toast.LENGTH_SHORT, // LENGTH_SHORT ≈ 3 seconds
+            gravity: ToastGravity.BOTTOM,
             backgroundColor: Colors.green.shade600,
-            colorText: Colors.white,
-            margin: EdgeInsets.all(16),
-            duration: Duration(seconds: 3),
-            icon: Icon(Icons.check_circle, color: Colors.white),
+            textColor: Colors.white,
+            fontSize: 16.0,
           );
 
-          // ✅ Reset all input fields
+
+          //  Reset all input fields
           nameController.clear();
           mobileNumberController.clear();
           usernameController.clear();
@@ -80,29 +79,47 @@ class AddBillerController extends GetxController {
           addressController.clear();
           // Keep businessIdController as it is since it's pre-filled.
 
-          // ✅ Reset the form state
+          //  Reset the form state
           formKey.currentState!.reset();
 
-          // ✅ Optionally navigate back or stay on the page
+          //  Optionally navigate back or stay on the page
           // Get.offAll(() => LoginScreen());
         } else {
-          Get.snackbar(
-            'Error',
-            'Sign Up Failed: ${response.body}',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.red,
-            colorText: Colors.white,
+          //Get.snackbar(
+            //'Error',
+            //'Sign Up Failed: ${response.body}',
+            //snackPosition: SnackPosition.BOTTOM,
+            //backgroundColor: Colors.red,
+            //colorText: Colors.white,
+          //);
+          Fluttertoast.showToast(
+            msg: "Error SignUp failed! ${response.body}",
+            toastLength: Toast.LENGTH_SHORT, // LENGTH_SHORT ≈ 3 seconds
+            gravity: ToastGravity.BOTTOM,
+            backgroundColor: Colors.green.shade600,
+            textColor: Colors.white,
+            fontSize: 16.0,
           );
+
         }
       } catch (e) {
         isLoading.value = false;
-        Get.snackbar(
-          'Error',
-          'An error occurred: $e',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.red,
-          colorText: Colors.white,
+        //Get.snackbar(
+          //'Error',
+          //'An error occurred: $e',
+          //snackPosition: SnackPosition.BOTTOM,
+          //backgroundColor: Colors.red,
+          //colorText: Colors.white,
+        //);
+        Fluttertoast.showToast(
+          msg: "Error, An error occured! $e",
+          toastLength: Toast.LENGTH_SHORT, // LENGTH_SHORT ≈ 3 seconds
+          gravity: ToastGravity.BOTTOM,
+          backgroundColor: Colors.green.shade600,
+          textColor: Colors.white,
+          fontSize: 16.0,
         );
+
       }
     }
   }
