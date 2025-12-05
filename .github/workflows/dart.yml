@@ -1,40 +1,64 @@
-name: 🍏 iOS Build
+name: Suvidha Software Solutions
 
 on:
   workflow_dispatch:
 
 jobs:
-  ios:
-    name: Build iOS Release (No Codesign)
-    runs-on: macos-latest
+  android:
+    name: 🤖 Android Build
+    runs-on: ubuntu-latest
 
     steps:
-      - name: 📥 Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: 🧩 Setup Flutter
-        uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@v2
         with:
-          channel: stable
-          architecture: x64
+          channel: 'stable'
 
-      - name: 📦 Install Flutter dependencies
+      - name: Install dependencies
         run: flutter pub get
 
-      - name: 🔧 Install CocoaPods dependencies
-        run: |
-          cd ios
-          pod install --repo-update
-      - name: 🍎 Build iOS release (no codesign)
-        run: flutter build ios --release --no-codesign
+      - name: Build APK
+        run: flutter build apk --analyze-size --target-platform android-arm64
 
-      - name: 📦 Prepare IPA package
-        run: |
-          mkdir -p Payload
-          cp -r build/ios/iphoneos/Runner.app Payload
-          zip -r -9 app-release.ipa Payload
-      - name: 📤 Upload IPA artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ios-release-ipa
-          path: app-release.ipa
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  ios:
+    name: 🍏 iOS Build
+    runs-on: macos-latest
+    needs: android
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          architecture: x64
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Update CocoaPods repo
+        run: pod repo update
+        working-directory: ios
+
+      - name: Build iOS release (no codesign)
+        run: flutter build ios --release --no-codesign
+
+      - name: Prepare .ipa
+        run: |
+          mkdir Payload
+          mv Runner.app Payload/
+          zip -qq -r -9 FlutterIpaExport.ipa Payload
+        working-directory: build/ios/iphoneos
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-ipa
+          path: build/ios/iphoneos/FlutterIpaExport.ipa
