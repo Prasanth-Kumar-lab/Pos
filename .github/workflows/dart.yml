@@ -1,0 +1,64 @@
+name: Suvidha Software Solutions
+
+on:
+  workflow_dispatch:
+
+jobs:
+  android:
+    name: 🤖 Android Build
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build APK
+        run: flutter build apk --release
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
+
+  ios:
+    name: 🍏 iOS Build
+    runs-on: macos-latest
+    needs: android
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+          architecture: x64
+
+      - name: Install Flutter dependencies
+        run: flutter pub get
+
+      - name: Update CocoaPods repo
+        run: pod repo update
+        working-directory: ios
+
+      - name: Build iOS release (no codesign)
+        run: flutter build ios --release --no-codesign
+
+      - name: Prepare .ipa
+        run: |
+          mkdir Payload
+          mv Runner.app Payload/
+          zip -qq -r -9 FlutterIpaExport.ipa Payload
+        working-directory: build/ios/iphoneos
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-ipa
+          path: build/ios/iphoneos/FlutterIpaExport.ipa
